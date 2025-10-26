@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8">
+     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Recibo de Pagamento</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 24px
+        }
+
+        .box {
+            border: 1px dashed #777;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0
+        }
+
+        small {
+            color: #555
+        }
+
+        @media print {
+            .no-print {
+                display: none
+            }
+        }
+    </style>
+
+    {% if request.GET.print %}
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+    {% endif %}
+
+</head>
+
+<body>
+
+     <div class="row">
+        <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{% url 'carteira:dashboard' %}">FiadoPro</a>
+            </div>
+        </nav>
+    </div>
+    <div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <button class="btn btn-success no-print" onclick="window.print()">Imprimir Recibo do Cliente</button>
+    <a href="{% url 'carteira:dashboard' %}" class="btn btn-secondary no-print">Voltar ao dashboard</a>
+  </div>
+    </div>
+
+    <h2 style="text-align:center;">Recibo de Pagamento</h2>
+
+     <!-- DADOS DA EMPRESA-->
+        <div class="box">
+            <div>
+                <strong>Empresa: {{ empresa.nome }}</strong>
+            </div>
+            <div>
+                <span> <strong>CNPJ/CPF: </strong>{{ empresa.cnpj_cpf}}</span>
+            </div>
+            <div>
+                <span> <strong>Telefone: </strong>{{ empresa.telefone }}</span>
+            </div>
+            <div>
+                <span> <strong>Endereço: </strong>{{ empresa.endereco }}</span>
+            </div>
+        </div>
+
+        <!-- DADOS DO CLIENTE-->
+    <div class="box">
+        <div>Conta: <strong>#{{ pg.conta.id }}</strong> — Cliente: <strong>{{ pg.conta.cliente.nome }}</strong></div>
+        <div>Data: {{ pg.data|date:'d/m/Y H:i' }}</div>
+        <div>Valor pago: <strong>R$ {{ pg.valor }}</strong></div>
+        <div>Observação: {{ pg.observacao }}</div>
+    </div>
+    <p>Comprovamos o recebimento do valor acima referente à conta citada.</p>
+
+</body>
+
+</html>

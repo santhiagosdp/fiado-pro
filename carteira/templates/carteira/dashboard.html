@@ -1,0 +1,291 @@
+{% extends 'carteira/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="row align-items-center mb-3">
+  <div class="col-6">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaConta">+ Nova conta de carteira</button>
+  </div>
+
+  <!-- Pesquisa global por nome (auto-submit) -->
+  <div class="col-6">
+    <form class="d-flex" method="get" action=".">
+      <input
+        type="search"
+        name="q"
+        class="form-control form-control-lg me-2"
+        placeholder="Digite o nome para pesquisar em todos os registros"
+        value="{{ q|default:'' }}"
+        id="dashboard-search"
+        autocomplete="off">
+      <button class="btn btn-outline-secondary" type="submit">Buscar</button>
+    </form>
+  </div>
+</div>
+
+{% if q %}
+  <div class="alert alert-info py-2 mb-3">
+    Filtrando por <strong>{{ q }}</strong>.
+    <a class="ms-2" href="{% url 'carteira:dashboard' %}">Limpar filtro</a>
+  </div>
+{% endif %}
+
+<!-- ATRASADOS -->
+<div class="box">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="m-0">Devedores em atraso</h4>
+  </div>
+
+  <table class="table table-striped table-sm table-bordered align-middle">
+    <thead>
+      <tr>
+        <th scope="col" style="width: 5%; white-space: nowrap;" class="text-center">id</th>
+        <th scope="col" style="width: 30%; white-space: nowrap;" class="text-center">Cliente</th>
+        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Vencimento</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Total</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Saldo</th>
+        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Status</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">#</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in atrasados %}
+        <tr>
+          <th class="text-center" scope="row">{{ c.id }}</th>
+          <td>{{ c.cliente.nome }}</td>
+          <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
+          <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
+          <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
+          <td class="text-center"><span class="badge bg-danger">Atraso</span></td>
+          <td class="text-center">
+            <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalExcluirConta"
+                    data-url="{% url 'carteira:excluir_conta' c.id %}"
+                    data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
+              Delete
+            </button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="text-muted">Sem atrasos 👏</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- EM ABERTO -->
+<div class="box">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="m-0">Em aberto</h4>
+  </div>
+
+  <table class="table table-striped table-sm table-bordered align-middle">
+    <thead>
+      <tr>
+        <th scope="col" style="width: 5%; white-space: nowrap;" class="text-center">id</th>
+        <th scope="col" style="width: 30%; white-space: nowrap;" class="text-center">Cliente</th>
+        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Vencimento</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Total</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Saldo</th>
+        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Status</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">#</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in em_aberto %}
+        <tr>
+          <th class="text-center" scope="row">{{ c.id }}</th>
+          <td>{{ c.cliente.nome }}</td>
+          <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
+          <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
+          <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
+          <td class="text-center"><span class="badge bg-warning text-dark">Em aberto</span></td>
+          <td class="text-center">
+            <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalExcluirConta"
+                    data-url="{% url 'carteira:excluir_conta' c.id %}"
+                    data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
+              Delete
+            </button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="text-muted">Sem contas em aberto</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- QUITADOS -->
+<div class="box">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="m-0">Quitados</h4>
+  </div>
+
+  <table class="table table-striped table-sm table-bordered align-middle">
+    <thead>
+      <tr>
+        <th scope="col" style="width: 5%; white-space: nowrap;" class="text-center">id</th>
+        <th scope="col" style="width: 30%; white-space: nowrap;" class="text-center">Cliente</th>
+        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Vencimento</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Total</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Saldo</th>
+        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Status</th>
+        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">#</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in quitados %}
+        <tr>
+          <th class="text-center" scope="row">{{ c.id }}</th>
+          <td>{{ c.cliente.nome }}</td>
+          <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
+          <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
+          <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
+          <td class="text-center"><span class="badge bg-success">Quitada</span></td>
+          <td class="text-center">
+            <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalExcluirConta"
+                    data-url="{% url 'carteira:excluir_conta' c.id %}"
+                    data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
+              Delete
+            </button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="text-muted">Sem contas quitadas</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+    <!-- ...BOTAO DE EXCLUIDOS ... -->
+<div class="row align-items-center mb-3">
+  <div class="col-6 d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'carteira:excluidos' %}">Ver excluídos</a>
+  </div>
+</div>
+
+<!-- Modal Nova Conta -->
+<div class="modal fade" id="modalNovaConta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nova conta de carteira (fiado)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="formNovaConta" method="post" action="{% url 'carteira:nova' %}">
+          {% csrf_token %}
+          {% include 'carteira/_nova_conta_form.html' %}
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="document.getElementById('formNovaConta').submit()">Salvar & imprimir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+ <!-- Modal Excluir Conta -->
+<div class="modal fade" id="modalExcluirConta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formExcluirConta" method="post" action="#">  <!-- <<< id corrigido -->
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar exclusão</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">Tem certeza que deseja excluir <strong id="excluir-label"></strong>?</p>
+          <small class="text-muted d-block mb-3">
+            A conta será marcada como excluída (soft delete) e poderá ser consultada em <em>Excluídos</em>.
+          </small>
+
+          <!-- Campos obrigatórios -->
+          <div class="mb-2">
+            {{ del_form.motivo }}
+          </div>
+          <div>
+            {{ del_form.senha }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    // Auto-submit com debounce
+    (function() {
+      const input = document.getElementById('dashboard-search');
+      if (!input) return;
+      let t = null;
+      input.addEventListener('input', function() {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          const form = input.closest('form');
+          if (form) form.submit();
+        }, 400); // 400ms
+      });
+    })();
+
+    // Preenche modal de exclusão dinamicamente
+  document.addEventListener('show.bs.modal', function (event) {
+    const modal = event.target;
+    if (modal.id !== 'modalExcluirConta') return;
+    const trigger = event.relatedTarget;
+    if (!trigger) return;
+
+    const url = trigger.getAttribute('data-url');
+    const label = trigger.getAttribute('data-label');
+
+    const form = modal.querySelector('#formExcluirConta'); // <<< bate com o id do form
+    const labelEl = modal.querySelector('#excluir-label');
+
+    if (form && url) form.setAttribute('action', url);
+    if (labelEl && label) labelEl.textContent = label;
+
+    // Foco no campo 'motivo' para agilizar
+    setTimeout(() => {
+      const motivoInput = modal.querySelector('#id_motivo');
+      if (motivoInput) motivoInput.focus();
+    }, 200);
+  });
+  </script>
+
+  {% if open_modal %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const modalEl = document.getElementById('modalNovaConta');
+      if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    });
+  </script>
+  {% endif %}
+{% endblock %}

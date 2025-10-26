@@ -1,0 +1,47 @@
+<div class="row g-3">
+    <div class="col-md-6">
+        <label class="form-label">Nome do cliente</label>
+        {{ cform.nome }}
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">CPF</label>
+        {{ cform.cpf }}
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Telefone</label>
+        {{ cform.telefone }}
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Vencimento (opcional)</label>
+        {{ conta_form.vencimento }}
+    </div>
+</div>
+<hr>
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="m-0">Itens da venda</h6>
+    <button type="button" class="btn btn-sm btn-dark" onclick="addItemRow()">+ Adicionar produto</button>
+</div>
+<div id="itensWrapper">
+    <!-- linha modelo -->
+    <div class="row g-2 align-items-end item-row d-none" id="itemRowTemplate">
+        <div class="col-md-6">
+            <label class="form-label">Produto</label>
+            <input type="text" name="itens-__prefix__-produto" class="form-control" placeholder="Ex.: Arroz 5kg">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Qtd</label>
+            <input type="number" name="itens-__prefix__-quantidade" min="1" class="form-control" value="1">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Valor unitário</label>
+            <input type="number" name="itens-__prefix__-valor_unit" step="0.01" class="form-control" value="0.00">
+        </div>
+        <div class="col-md-1 text-end">
+            <button type="button" class="btn btn-link text-danger" onclick="removeItemRow(this)">Remover</button>
+        </div>
+    </div>
+</div>
+<input type="hidden" name="itens-TOTAL_FORMS" id="id_itens-TOTAL_FORMS" value="1">
+<input type="hidden" name="itens-INITIAL_FORMS" value="0">
+<input type="hidden" name="itens-MIN_NUM_FORMS" value="0">
+<input type="hidden" name="itens-MAX_NUM_FORMS" value="1000">

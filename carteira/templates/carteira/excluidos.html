@@ -1,0 +1,126 @@
+{% extends "carteira/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Contas excluídas</h3>
+    <a href="{% url 'carteira:dashboard' %}" class="btn btn-secondary">Voltar ao dashboard</a>
+  </div>
+
+  <form method="get" class="mb-3">
+    <div class="input-group">
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por cliente...">
+      <button class="btn btn-outline-primary" type="submit">Buscar</button>
+    </div>
+  </form>
+
+  {% if contas %}
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Cliente</th>
+          <th>Criado em</th>
+          <th>Vencimento</th>
+          <th>Total</th>
+          <th>Saldo</th>
+          <th>Status</th>
+          <th>Excluída em</th>
+          <th>Motivo</th>
+          <th>Excluída por</th>
+          <th class="text-center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in contas %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td>{{ c.cliente.nome }}</td>
+          <td>{{ c.criado_em|date:"d/m/Y" }}</td>
+          <td>{% if c.vencimento %}{{ c.vencimento|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+          <td>R$ {{ c.total }}</td>
+          <td>R$ {{ c.saldo }}</td>
+          <td>
+            <span
+              class="badge bg-{% if c.status == 'PAGO' %}success{% elif c.status == 'ATRASO' %}danger{% else %}warning text-dark{% endif %}">
+              {{ c.get_status_display }}
+            </span>
+          </td>
+          <td>{{ c.deleted_at|date:"d/m/Y H:i" }}</td>
+          <td>{{ c.deleted_reason|default:"—" }}</td>
+          <td>{{ c.deleted_by.get_username|default:"—" }}</td>
+          <td class="text-center">
+            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
+              data-bs-target="#modalRestaurarConta" data-url="{% url 'carteira:restaurar_conta' c.id %}"
+              data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
+              Cancelar exclusão
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+  {% else %}
+  <div class="alert alert-info">Nenhuma conta excluída encontrada.</div>
+  {% endif %}
+</div>
+
+
+<!-- Modal Restaurar Conta -->
+<div class="modal fade" id="modalRestaurarConta" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formRestaurarConta" method="post" action="#">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar restauração</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">Deseja restaurar <strong id="restaurar-label"></strong>?</p>
+          <small class="text-muted d-block mb-3">A conta voltará a aparecer no dashboard.</small>
+
+          <div class="mb-2">
+            <label class="form-label">Digite sua senha para confirmar</label>
+            <input type="password" name="senha" id="id_senha_restaurar" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Confirmar restauração</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('show.bs.modal', function (event) {
+    const modal = event.target;
+    if (modal.id !== 'modalRestaurarConta') return;
+
+    const trigger = event.relatedTarget;
+    if (!trigger) return;
+
+    const url = trigger.getAttribute('data-url');
+    const label = trigger.getAttribute('data-label');
+    const form = modal.querySelector('#formRestaurarConta');
+    const labelEl = modal.querySelector('#restaurar-label');
+
+    if (form && url) form.setAttribute('action', url);
+    if (labelEl && label) labelEl.textContent = label;
+
+    // Foca automaticamente no campo de senha ao abrir o modal
+    setTimeout(() => {
+      const senhaInput = modal.querySelector('#id_senha_restaurar');
+      if (senhaInput) senhaInput.focus();
+    }, 200);
+  });
+</script>
+{% endblock %}
