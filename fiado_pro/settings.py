@@ -5,8 +5,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-pua2cr(8vdn@j)ky#3(t%ae0=+322gm3+2y@um9y_yktrc4k$b'
-DEBUG = True
-ALLOWED_HOSTS = []
+DEBUG = False
+ALLOWED_HOSTS = ["fiadopro.pythonanywhere.com","127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -71,6 +71,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Auth config ---
 LOGIN_URL = 'login'
