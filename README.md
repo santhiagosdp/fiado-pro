@@ -1,2 +1,2 @@
-# fiados-pro
+# fiado-pro
 sistema simples para cadastro de vendas em carteira. (fiados)
