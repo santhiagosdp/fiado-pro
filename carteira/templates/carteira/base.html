@@ -4,54 +4,322 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FiadoPro</title>
+  <title>{% block title %}FiadoPro{% endblock %}</title>
+  <meta name="theme-color" content="#0b2447">
+
+  <!-- Bootstrap & Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Estilos globais do FiadoPro (padrão do dashboard) -->
   <style>
-    .box {
-      border: 1px dashed #777;
-      border-radius: 8px;
-      padding: 12px;
-      margin: 12px 0;
+    :root {
+      --azul-escuro: #0b2447;
+      --azul-medio: #19376d;
+      --azul-claro: #576cbc;
+      --azul-destaque: #a5d7e8;
+    }
+
+    /* Navbar */
+    .navbar-fiado {
+      background: linear-gradient(180deg, var(--azul-escuro), var(--azul-medio));
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+    }
+
+    /* Hero (usado no dashboard e páginas internas) */
+    .dashboard-hero {
+      background: linear-gradient(180deg, var(--azul-escuro), var(--azul-medio));
+      border-radius: 16px;
+      padding: 18px 18px;
+      margin-bottom: 18px;
+      color: #fff;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, .18);
+    }
+
+    .dashboard-hero .title {
+      font-weight: 600;
+      letter-spacing: .2px;
+    }
+
+    /* Cards de seção */
+    .section-card {
+      border: 1px solid rgba(0, 0, 0, .04);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 6px 24px rgba(10, 20, 40, .06);
+      margin-bottom: 20px;
+    }
+
+    .section-card .card-header {
+      border-bottom: 1px solid rgba(0, 0, 0, .06);
+      background: linear-gradient(180deg, #ffffff, #f8f9ff);
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      padding: 14px 16px;
+    }
+
+    .section-card .card-header h4 {
+      margin: 0;
+      font-weight: 600;
+      color: var(--azul-medio);
+    }
+
+    .section-card .card-body {
+      padding: 0;
+    }
+
+    /* Tabelas */
+    .table-wrap {
+      width: 100%;
+      overflow: auto;
+    }
+
+    .table thead th {
+      position: sticky;
+      top: 0;
+      background: #f3f5ff;
+      z-index: 1;
+      font-weight: 600;
+      color: #2a2f45;
+      border-bottom: 1px solid #e5e7f0 !important;
+    }
+
+    .table.table-sm td,
+    .table.table-sm th {
+      padding: .55rem .65rem;
+    }
+
+    .table-hover tbody tr:hover {
+      background: #f9fbff;
+    }
+
+    .table-bordered> :not(caption)>* {
+      border-color: #e9ecf7;
     }
 
     .table td.text-end,
     .table th.text-end {
       text-align: right;
     }
+
+    /* Badges coerentes */
+    .badge-danger,
+    .bg-danger {
+      background-color: #dc3545 !important;
+    }
+
+    .badge-warning,
+    .bg-warning {
+      background-color: #ffd166 !important;
+      color: #3b3b3b !important;
+    }
+
+    .badge-success,
+    .bg-success {
+      background-color: #2fbf71 !important;
+    }
+
+    /* Botões/inputs padrão painel */
+    .btn-primary {
+      background: var(--azul-claro);
+      border: 0;
+    }
+
+    .btn-primary:hover {
+      background: var(--azul-destaque);
+      color: #0b2447;
+    }
+
+    .btn-outline-dark {
+      border-color: #c7cce0;
+      color: #2a2f45;
+    }
+
+    .btn-outline-dark:hover {
+      background: #eef2ff;
+      border-color: #c7cce0;
+      color: #1d2340;
+    }
+
+    .btn-outline-danger {
+      border-color: #f1b5bb;
+    }
+
+    .btn-outline-danger:hover {
+      background: #fdecee;
+    }
+
+    .search-box .form-control {
+      border-radius: 12px;
+      border-color: #c7cce0;
+      box-shadow: none;
+    }
+
+    .search-box .btn {
+      border-radius: 12px;
+    }
+
+    /* Modais temáticos (reuso do dashboard) */
+    .modal-themed .modal-content {
+      border: 0;
+      border-radius: 18px;
+      box-shadow: 0 25px 60px rgba(11, 36, 71, .25);
+      overflow: hidden;
+    }
+
+    .modal-themed .modal-header {
+      border-bottom: 0;
+      padding: 18px 20px;
+      align-items: center;
+    }
+
+    .modal-themed .modal-title {
+      display: flex;
+      gap: .6rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #fff;
+      margin: 0;
+    }
+
+    .modal-themed .modal-body {
+      padding: 18px 20px;
+      background: #ffffff;
+    }
+
+    .modal-themed .modal-footer {
+      border-top: 0;
+      background: #fafbff;
+      padding: 14px 20px;
+    }
+
+    .modal-themed.new .modal-header {
+      background: linear-gradient(180deg, var(--azul-claro), var(--azul-medio));
+    }
+
+    .modal-themed.danger .modal-header {
+      background: linear-gradient(180deg, #f87171, #dc2626);
+    }
+
+    .modal-context {
+      background: #f3f5ff;
+      border: 1px dashed #c7cce0;
+      color: #1d2340;
+      border-radius: 12px;
+      padding: .6rem .8rem;
+      margin-bottom: 1rem;
+      font-size: .92rem;
+    }
+
+    .modal-themed .form-control,
+    .modal-themed .form-select,
+    .modal-themed textarea {
+      border-radius: 12px;
+      border-color: #c7cce0;
+      box-shadow: none;
+    }
+
+    .modal-themed .form-control:focus,
+    .modal-themed .form-select:focus,
+    .modal-themed textarea:focus {
+      border-color: var(--azul-claro);
+      box-shadow: 0 0 0 .2rem rgba(87, 108, 188, .2);
+    }
+
+    .modal-backdrop.show {
+      backdrop-filter: blur(2px);
+    }
+
+    /* Utilidades */
+    .top-actions .btn-primary {
+      border-radius: 12px;
+      padding: .6rem 1rem;
+      font-weight: 600;
+    }
+ 
+    .row-actions .btn {
+      padding: .25rem .5rem;
+    }
+
+    .text-muted {
+      color: #6b7280 !important;
+    }
+
+    /* Caixas simples (legadas) */
+    .box {
+      border: 1px dashed #777;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+    }
   </style>
+
   {% block extra_css %}{% endblock %}
 </head>
 
 <body class="bg-light">
   {% load static %}
-  <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="{% url 'carteira:dashboard' %}">FiadoPro</a>
-      <div class="d-flex ms-auto">
-        {% if request.user.is_authenticated %}
-        <span class="navbar-text me-3">Olá, {{ request.user.username }}</span>
 
-        <form method="post" action="{% url 'logout' %}" class="d-inline">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-outline-light btn-sm">Sair</button>
-        </form>
-        {% else %}
-        <a class="btn btn-outline-light btn-sm" href="{% url 'login' %}">Entrar</a>
-        <a class="btn btn-primary btn-sm ms-2" href="{% url 'signup' %}">Criar conta</a>
-        {% endif %}
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-fiado sticky-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="{% url 'carteira:dashboard' %}">
+        <i class="bi bi-journal-richtext me-2"></i> FiadoPro
+      </a>
 
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <!-- Espaço para links futuros -->
+        </ul>
+
+        <div class="d-flex align-items-center gap-2">
+          {% if request.user.is_authenticated %}
+          <span class="navbar-text d-none d-sm-inline text-white-50">
+            Olá, <strong>{{ request.user.username }}</strong>
+          </span>
+          <form method="post" action="{% url 'logout' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-light btn-sm">
+              <i class="bi bi-box-arrow-right"></i> Sair
+            </button>
+          </form>
+          {% else %}
+          <a class="btn btn-outline-light btn-sm" href="{% url 'login' %}">
+            <i class="bi bi-box-arrow-in-right"></i> Entrar
+          </a>
+          <a class="btn btn-primary btn-sm ms-1" href="{% url 'signup' %}">
+            <i class="bi bi-person-plus"></i> Criar conta
+          </a>
+          {% endif %}
+        </div>
       </div>
     </div>
   </nav>
 
+  <!-- Conteúdo -->
   <div class="container py-4">
+
+    <!-- Mensagens Django com níveis -->
+    {% if messages %}
     {% for message in messages %}
-    <div class="alert alert-success">{{ message }}</div>
+    <div
+      class="alert alert-{% if message.tags == 'error' %}danger{% elif 'warning' in message.tags %}warning{% elif 'success' in message.tags %}success{% else %}info{% endif %} alert-dismissible fade show"
+      role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    </div>
     {% endfor %}
+    {% endif %}
+
 
     {% block content %}{% endblock %}
   </div>
 
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'carteira/carteira.js' %}"></script>
   {% block extra_js %}{% endblock %}

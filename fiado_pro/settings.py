@@ -5,7 +5,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-pua2cr(8vdn@j)ky#3(t%ae0=+322gm3+2y@um9y_yktrc4k$b'
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ["fiadopro.pythonanywhere.com","127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
@@ -21,6 +21,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,6 +64,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'pt-br'
+USE_L10N = True
 TIME_ZONE = 'America/Araguaina'
 USE_I18N = True
 USE_TZ = True

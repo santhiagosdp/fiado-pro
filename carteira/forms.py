@@ -1,8 +1,10 @@
 # carteira/forms.py
+import re
+from django import forms
+from django.core.exceptions import ValidationError
+
 from django.forms import formset_factory
 from .models import Cliente, ContaCarteira, ItemVenda, Pagamento
-from django import forms
-
 
 
 class ClienteForm(forms.ModelForm):
@@ -10,10 +12,53 @@ class ClienteForm(forms.ModelForm):
         model = Cliente
         fields = ["nome", "cpf", "telefone"]
         widgets = {
-            "nome": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nome do cliente"}),
-            "cpf": forms.TextInput(attrs={"class": "form-control", "placeholder": "000.000.000-00"}),
-            "telefone": forms.TextInput(attrs={"class": "form-control", "placeholder": "(63) 9 0000-0000"}),
+            "nome": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Nome do cliente"
+            }),
+            # Mantém o nome do campo como 'cpf' (model), mas dá o ID que o JS usa: 'id_cpf_cnpj'
+            "cpf": forms.TextInput(attrs={
+                "class": "form-control",
+                "id": "id_cpf_cnpj",
+                "placeholder": "CPF ou CNPJ",
+                "inputmode": "numeric",
+                "autocomplete": "on",
+            }),
+            "telefone": forms.TextInput(attrs={
+                "class": "form-control",
+                "id": "id_telefone",
+                "placeholder": "(00) 00000-0000",
+                "inputmode": "tel",
+                "autocomplete": "tel",
+                "maxlength": "16",  # suficiente para (00) 00000-0000
+            }),
         }
+
+    def clean_cpf(self):
+        """
+        Aceita CPF (11 dígitos) ou CNPJ (14 dígitos).
+        Remove qualquer máscara e retorna apenas números.
+        """
+        v = self.cleaned_data.get("cpf", "") or ""
+        digits = re.sub(r"\D+", "", v)
+
+        if len(digits) not in (11, 14):
+            raise ValidationError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.")
+
+        # Se quiser validar dígito verificador de CPF/CNPJ, me avise que adiciono aqui.
+        return digits
+
+    def clean_telefone(self):
+        """
+        Remove máscara. Aceita 10 ou 11 dígitos (fixo ou celular com 9).
+        """
+        v = self.cleaned_data.get("telefone", "") or ""
+        digits = re.sub(r"\D+", "", v)
+
+        if len(digits) not in (10, 11):
+            raise ValidationError("Informe um telefone válido (DDD + número).")
+
+        return digits
 
 
 class ContaForm(forms.ModelForm):
@@ -21,14 +66,26 @@ class ContaForm(forms.ModelForm):
         model = ContaCarteira
         fields = ["vencimento"]
         widgets = {
-            "vencimento": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "vencimento": forms.DateInput(attrs={
+                "class": "form-control",
+                "type": "date"
+            }),
         }
 
 
 class ItemInlineForm(forms.Form):
-    produto = forms.CharField(widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Produto"}))
-    quantidade = forms.IntegerField(min_value=1, widget=forms.NumberInput(attrs={"class": "form-control"}))
-    valor_unit = forms.DecimalField(min_value=0, decimal_places=2, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
+    produto = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Produto"})
+    )
+    quantidade = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(attrs={"class": "form-control"})
+    )
+    valor_unit = forms.DecimalField(
+        min_value=0,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"})
+    )
 
 
 ItemFormSet = formset_factory(ItemInlineForm, extra=1, can_delete=True)
@@ -44,9 +101,6 @@ class PagamentoForm(forms.ModelForm):
         }
 
 
-# carteira/forms.py
-# ... imports existentes ...
-
 class DeleteConfirmForm(forms.Form):
     motivo = forms.CharField(
         label="Motivo da exclusão",
@@ -58,7 +112,7 @@ class DeleteConfirmForm(forms.Form):
         widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Confirme sua senha"}),
     )
 
-# carteira/forms.py
+
 class RestoreConfirmForm(forms.Form):
     senha = forms.CharField(
         label="Sua senha",

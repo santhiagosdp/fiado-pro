@@ -4,228 +4,471 @@
 
 {% block content %}
 
-<div class="row align-items-center mb-3">
-  <div class="col-6">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaConta">+ Nova conta de carteira</button>
-  </div>
+<!-- ESTILOS -->
+<style>
+  /* --------- MODAIS TEMÁTICOS (visual apenas) --------- */
+  .modal-themed .modal-content{
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 25px 60px rgba(11,36,71,.25);
+    overflow: hidden;
+  }
+  .modal-themed .modal-header{
+    border-bottom: 0;
+    padding: 18px 20px;
+    align-items: center;
+  }
+  .modal-themed .modal-title{
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #fff;
+    margin: 0;
+  }
+  .modal-themed .modal-body{
+    padding: 18px 20px;
+    background: #ffffff;
+  }
+  .modal-themed .modal-footer{
+    border-top: 0;
+    background: #fafbff;
+    padding: 14px 20px;
+  }
+  /* Nova Conta - cabeçalho azul institucional */
+  .modal-themed.new .modal-header{
+    background: linear-gradient(180deg, var(--azul-claro), var(--azul-medio));
+  }
+  /* Excluir - cabeçalho vermelho de alerta */
+  .modal-themed.danger .modal-header{
+    background: linear-gradient(180deg, #f87171, #dc2626);
+  }
 
-  <!-- Pesquisa global por nome (auto-submit) -->
-  <div class="col-6">
-    <form class="d-flex" method="get" action=".">
-      <input
-        type="search"
-        name="q"
-        class="form-control form-control-lg me-2"
-        placeholder="Digite o nome para pesquisar em todos os registros"
-        value="{{ q|default:'' }}"
-        id="dashboard-search"
-        autocomplete="off">
-      <button class="btn btn-outline-secondary" type="submit">Buscar</button>
-    </form>
+  /* Campos mais elegantes */
+  .modal-themed .form-control, .modal-themed .form-select, .modal-themed textarea{
+    border-radius: 12px;
+    border-color: #c7cce0;
+    box-shadow: none;
+  }
+  .modal-themed .form-control:focus, .modal-themed .form-select:focus, .modal-themed textarea:focus{
+    border-color: var(--azul-claro);
+    box-shadow: 0 0 0 .2rem rgba(87,108,188,.2);
+  }
+
+  /* Badge de contexto no topo do corpo do modal */
+  .modal-context{
+    background: #f3f5ff;
+    border: 1px dashed #c7cce0;
+    color: #1d2340;
+    border-radius: 12px;
+    padding: .6rem .8rem;
+    margin-bottom: 1rem;
+    font-size: .92rem;
+  }
+
+  /* Linhas de formulário em grid (quando seu include gerar vários campos) */
+  .modal-form-grid{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .8rem;
+  }
+  @media (min-width: 768px){
+    .modal-form-grid.two-cols{
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  }
+
+  /* Botões do rodapé */
+  .modal-themed .btn{
+    border-radius: 12px;
+    padding: .55rem 1rem;
+    font-weight: 600;
+  }
+  .modal-themed .btn-primary{
+    background: var(--azul-claro);
+    border: 0;
+  }
+  .modal-themed .btn-primary:hover{
+    background: var(--azul-destaque);
+    color: var(--azul-escuro);
+  }
+  .modal-themed .btn-danger{
+    background: #ef4444;
+    border: 0;
+  }
+  .modal-themed .btn-danger:hover{
+    background: #dc2626;
+  }
+
+  /* Backdrop com leve blur (suportado na maioria) */
+  .modal-backdrop.show{
+    backdrop-filter: blur(2px);
+  }
+
+  /* Linha de destaque para o item a excluir */
+  .danger-note{
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #7f1d1d;
+    border-radius: 12px;
+    padding: .7rem .9rem;
+    font-size: .93rem;
+    margin-bottom: 1rem;
+  }
+  .danger-note strong{ color: #991b1b; }
+
+  :root{
+    --azul-escuro:#0b2447;
+    --azul-medio:#19376d;
+    --azul-claro:#576cbc;
+    --azul-destaque:#a5d7e8;
+  }
+
+  .dashboard-hero {
+    background: linear-gradient(180deg, var(--azul-escuro), var(--azul-medio));
+    border-radius: 16px;
+    padding: 18px 18px;
+    margin-bottom: 18px;
+    color: #fff;
+    box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  }
+  .dashboard-hero .title {
+    font-weight: 600;
+    letter-spacing: .2px;
+  }
+
+  .section-card{
+    border: 1px solid rgba(0,0,0,.04);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(10, 20, 40, .06);
+    margin-bottom: 20px;
+  }
+  .section-card .card-header{
+    border-bottom: 1px solid rgba(0,0,0,.06);
+    background: linear-gradient(180deg, #ffffff, #f8f9ff);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: 14px 16px;
+  }
+  .section-card .card-header h4{
+    margin: 0;
+    font-weight: 600;
+    color: var(--azul-medio);
+  }
+  .section-card .card-body{ padding: 0; }
+
+  .table-wrap{ width: 100%; overflow: auto; }
+  .table thead th{
+    position: sticky;
+    top: 0;
+    background: #f3f5ff;
+    z-index: 1;
+    font-weight: 600;
+    color: #2a2f45;
+    border-bottom: 1px solid #e5e7f0 !important;
+  }
+  .table.table-sm td, .table.table-sm th{ padding: .55rem .65rem; }
+  .table-hover tbody tr:hover { background: #f9fbff; }
+  .table-bordered> :not(caption)>* { border-color: #e9ecf7; }
+
+  .badge-danger, .bg-danger { background-color: #dc3545 !important; }
+  .badge-warning, .bg-warning { background-color: #ffd166 !important; color:#3b3b3b !important; }
+  .badge-success, .bg-success { background-color: #2fbf71 !important; }
+
+  .btn-primary{ background: var(--azul-claro); border: 0; }
+  .btn-primary:hover{ background: var(--azul-destaque); color: #0b2447; }
+  .btn-outline-dark{ border-color:#c7cce0; color:#2a2f45; }
+  .btn-outline-dark:hover{ background:#eef2ff; border-color:#c7cce0; color:#1d2340; }
+  .btn-outline-danger{ border-color:#f1b5bb; }
+  .btn-outline-danger:hover{ background:#fdecee; }
+
+  .search-box .form-control{
+    border-radius: 12px;
+    border-color:#c7cce0;
+    box-shadow: none;
+  }
+  .search-box .btn{ border-radius: 12px; }
+
+  .alert-info{
+    border: 1px solid #bcd4ff;
+    background: #e9f2ff;
+    color: #0b2447;
+  }
+
+  .row-actions .btn{ padding: .25rem .5rem; }
+
+  .top-actions .btn-primary{
+    border-radius: 12px;
+    padding: .6rem 1rem;
+    font-weight: 600;
+  }
+
+  .btn-outline-secondary{
+    border-color:#c7cce0;
+    color:#2a2f45;
+  }
+  .btn-outline-secondary:hover{
+    background:#eef2ff;
+    color:#1d2340;
+  }
+
+  .text-muted{ color:#6b7280 !important; }
+</style>
+
+<!-- HEADER / AÇÕES RÁPIDAS -->
+<div class="dashboard-hero">
+  <div class="row g-2 align-items-center">
+    <div class="col-12 col-lg-6 top-actions d-flex gap-2">
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaConta">+ Nova conta de carteira</button>
+      <a class="btn btn-outline-light"  href="{% url 'carteira:excluidos' %}">Ver excluídos</a>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <form class="d-flex search-box" method="get" action=".">
+        <input
+          type="search"
+          name="q"
+          class="form-control form-control-lg me-2"
+          placeholder="Pesquisar cliente em todos os registros…"
+          value="{{ q|default:'' }}"
+          id="dashboard-search"
+          autocomplete="off">
+        <button class="btn btn-light" type="submit">Buscar</button>
+      </form>
+    </div>
   </div>
 </div>
 
 {% if q %}
-  <div class="alert alert-info py-2 mb-3">
-    Filtrando por <strong>{{ q }}</strong>.
-    <a class="ms-2" href="{% url 'carteira:dashboard' %}">Limpar filtro</a>
+  <div class="alert alert-info py-2 mb-3 d-flex justify-content-between align-items-center">
+    <div>
+      Filtrando por <strong>{{ q }}</strong>.
+      <a class="ms-2" href="{% url 'carteira:dashboard' %}">Limpar filtro</a>
+    </div>
   </div>
 {% endif %}
 
-<!-- ATRASADOS -->
-<div class="box">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="m-0">Devedores em atraso</h4>
+<!-- DEVEDORES EM ATRASO -->
+<div class="section-card">
+  <div class="card-header">
+    <h4>Devedores em atraso <small>— priorize estes primeiro</small></h4>
   </div>
-
-  <table class="table table-striped table-sm table-bordered align-middle">
-    <thead>
-      <tr>
-        <th scope="col" style="width: 5%; white-space: nowrap;" class="text-center">id</th>
-        <th scope="col" style="width: 30%; white-space: nowrap;" class="text-center">Cliente</th>
-        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Vencimento</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Total</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Saldo</th>
-        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Status</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">#</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in atrasados %}
-        <tr>
-          <th class="text-center" scope="row">{{ c.id }}</th>
-          <td>{{ c.cliente.nome }}</td>
-          <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
-          <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
-          <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
-          <td class="text-center"><span class="badge bg-danger">Atraso</span></td>
-          <td class="text-center">
-            <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
-            <button type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalExcluirConta"
-                    data-url="{% url 'carteira:excluir_conta' c.id %}"
-                    data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
-              Delete
-            </button>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="7" class="text-muted">Sem atrasos 👏</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="card-body">
+    <div class="table-wrap">
+      <table class="table table-striped table-sm table-bordered table-hover align-middle">
+        <thead>
+          <tr>
+            <th class="text-center">id</th>
+            <th class="text-center">Cliente</th>
+            <th class="text-center">Vencimento</th>
+            <th class="text-center">Total</th>
+            <th class="text-center">Saldo</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">#</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in atrasados %}
+            <tr>
+              <th class="text-center">{{ c.id }}</th>
+              <td>{{ c.cliente.nome }}</td>
+              <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
+              <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
+              <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
+              <td class="text-center"><span class="badge bg-danger">Atraso</span></td>
+              <td class="text-center row-actions">
+                <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalExcluirConta"
+                        data-url="{% url 'carteira:excluir_conta' c.id %}"
+                        data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="text-muted text-center py-3">Sem atrasos 👏</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- EM ABERTO -->
-<div class="box">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="m-0">Em aberto</h4>
+<div class="section-card">
+  <div class="card-header"><h4>Em aberto</h4></div>
+  <div class="card-body">
+    <div class="table-wrap">
+      <table class="table table-striped table-sm table-bordered table-hover align-middle">
+        <thead>
+          <tr>
+            <th class="text-center">id</th>
+            <th class="text-center">Cliente</th>
+            <th class="text-center">Vencimento</th>
+            <th class="text-center">Total</th>
+            <th class="text-center">Saldo</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">#</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in em_aberto %}
+            <tr>
+              <th class="text-center">{{ c.id }}</th>
+              <td>{{ c.cliente.nome }}</td>
+              <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
+              <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
+              <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
+              <td class="text-center"><span class="badge bg-warning text-dark">Em aberto</span></td>
+              <td class="text-center row-actions">
+                <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalExcluirConta"
+                        data-url="{% url 'carteira:excluir_conta' c.id %}"
+                        data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="text-muted text-center py-3">Sem contas em aberto</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-
-  <table class="table table-striped table-sm table-bordered align-middle">
-    <thead>
-      <tr>
-        <th scope="col" style="width: 5%; white-space: nowrap;" class="text-center">id</th>
-        <th scope="col" style="width: 30%; white-space: nowrap;" class="text-center">Cliente</th>
-        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Vencimento</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Total</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Saldo</th>
-        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Status</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">#</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in em_aberto %}
-        <tr>
-          <th class="text-center" scope="row">{{ c.id }}</th>
-          <td>{{ c.cliente.nome }}</td>
-          <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
-          <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
-          <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
-          <td class="text-center"><span class="badge bg-warning text-dark">Em aberto</span></td>
-          <td class="text-center">
-            <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
-            <button type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalExcluirConta"
-                    data-url="{% url 'carteira:excluir_conta' c.id %}"
-                    data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
-              Delete
-            </button>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="7" class="text-muted">Sem contas em aberto</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
 </div>
 
 <!-- QUITADOS -->
-<div class="box">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="m-0">Quitados</h4>
-  </div>
-
-  <table class="table table-striped table-sm table-bordered align-middle">
-    <thead>
-      <tr>
-        <th scope="col" style="width: 5%; white-space: nowrap;" class="text-center">id</th>
-        <th scope="col" style="width: 30%; white-space: nowrap;" class="text-center">Cliente</th>
-        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Vencimento</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Total</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">Saldo</th>
-        <th scope="col" style="width: 10%; white-space: nowrap;" class="text-center">Status</th>
-        <th scope="col" style="width: 15%; white-space: nowrap;" class="text-center">#</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in quitados %}
-        <tr>
-          <th class="text-center" scope="row">{{ c.id }}</th>
-          <td>{{ c.cliente.nome }}</td>
-          <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
-          <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
-          <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
-          <td class="text-center"><span class="badge bg-success">Quitada</span></td>
-          <td class="text-center">
-            <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
-            <button type="button"
-                    class="btn btn-sm btn-outline-danger"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalExcluirConta"
-                    data-url="{% url 'carteira:excluir_conta' c.id %}"
-                    data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
-              Delete
-            </button>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="7" class="text-muted">Sem contas quitadas</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-    <!-- ...BOTAO DE EXCLUIDOS ... -->
-<div class="row align-items-center mb-3">
-  <div class="col-6 d-flex gap-2">
-    <a class="btn btn-outline-secondary" href="{% url 'carteira:excluidos' %}">Ver excluídos</a>
+<div class="section-card">
+  <div class="card-header"><h4>Quitados</h4></div>
+  <div class="card-body">
+    <div class="table-wrap">
+      <table class="table table-striped table-sm table-bordered table-hover align-middle">
+        <thead>
+          <tr>
+            <th class="text-center">id</th>
+            <th class="text-center">Cliente</th>
+            <th class="text-center">Vencimento</th>
+            <th class="text-center">Total</th>
+            <th class="text-center">Saldo</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">#</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in quitados %}
+            <tr>
+              <th class="text-center">{{ c.id }}</th>
+              <td>{{ c.cliente.nome }}</td>
+              <td class="text-center">{{ c.vencimento|date:'d/m/Y' }}</td>
+              <td class="text-center">R$ {{ c.total|floatformat:2|intcomma }}</td>
+              <td class="text-center">R$ {{ c.saldo|floatformat:2|intcomma }}</td>
+              <td class="text-center"><span class="badge bg-success">Quitada</span></td>
+              <td class="text-center row-actions">
+                <a class="btn btn-sm btn-outline-dark me-1" href="{% url 'carteira:conta' c.id %}">Abrir</a>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalExcluirConta"
+                        data-url="{% url 'carteira:excluir_conta' c.id %}"
+                        data-label="Conta #{{ c.id }} — {{ c.cliente.nome }}">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="text-muted text-center py-3">Sem contas quitadas</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
 <!-- Modal Nova Conta -->
 <div class="modal fade" id="modalNovaConta" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content modal-themed new">
       <div class="modal-header">
-        <h5 class="modal-title">Nova conta de carteira (fiado)</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        <h5 class="modal-title">
+          🧾 Nova conta de carteira (fiado)
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
 
       <div class="modal-body">
+        <div class="modal-context">
+          Preencha os dados e confirme para salvar. Você poderá imprimir o recibo na sequência.
+        </div>
+
         <form id="formNovaConta" method="post" action="{% url 'carteira:nova' %}">
           {% csrf_token %}
-          {% include 'carteira/_nova_conta_form.html' %}
+
+          <!--
+            Seu include já monta os campos.
+            Para organizar visualmente, você pode (opcional) envolver alguns grupos
+            com a classe abaixo. Não altera a lógica, só disposição.
+          -->
+          <div class="modal-form-grid">
+            {% include 'carteira/_nova_conta_form.html' %}
+          </div>
         </form>
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-primary" onclick="document.getElementById('formNovaConta').submit()">Salvar & imprimir</button>
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="document.getElementById('formNovaConta').submit()">
+          Salvar & imprimir
+        </button>
       </div>
     </div>
   </div>
 </div>
 
- <!-- Modal Excluir Conta -->
+<!-- Modal Excluir Conta -->
 <div class="modal fade" id="modalExcluirConta" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form id="formExcluirConta" method="post" action="#">  <!-- <<< id corrigido -->
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content modal-themed danger">
+      <form id="formExcluirConta" method="post" action="#" autocomplete="off">
         {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title">Confirmar exclusão</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          <p class="mb-2">Tem certeza que deseja excluir <strong id="excluir-label"></strong>?</p>
-          <small class="text-muted d-block mb-3">
-            A conta será marcada como excluída (soft delete) e poderá ser consultada em <em>Excluídos</em>.
-          </small>
 
-          <!-- Campos obrigatórios -->
-          <div class="mb-2">
+        <!-- iscas anti-autofill -->
+        <input type="text" name="fake_username" autocomplete="username" class="d-none" tabindex="-1" aria-hidden="true">
+        <input type="password" name="fake_password" autocomplete="new-password" class="d-none" tabindex="-1" aria-hidden="true">
+
+        <div class="modal-header">
+          <h5 class="modal-title">🗑️ Confirmar exclusão</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="danger-note">
+            Tem certeza que deseja excluir <strong id="excluir-label"></strong>?
+            <div class="small mt-1">A conta será marcada como <em>excluída</em> e poderá ser consultada em <strong>Excluídos</strong>.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Motivo</label>
             {{ del_form.motivo }}
           </div>
-          <div>
+
+          <div class="mb-1">
+            <label class="form-label fw-semibold">Senha</label>
             {{ del_form.senha }}
           </div>
         </div>
+
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-danger">Excluir</button>
         </div>
       </form>
@@ -237,23 +480,125 @@
 {% endblock %}
 
 {% block extra_js %}
-  {{ block.super }}
-  <script>
-    // Auto-submit com debounce
-    (function() {
-      const input = document.getElementById('dashboard-search');
-      if (!input) return;
-      let t = null;
-      input.addEventListener('input', function() {
-        clearTimeout(t);
-        t = setTimeout(() => {
-          const form = input.closest('form');
-          if (form) form.submit();
-        }, 400); // 400ms
-      });
-    })();
+<script>
+  // Efeito de "loading" no botão submit dos modais (visual)
+  document.addEventListener('submit', function(e){
+    const btn = e.target.closest('.modal-content')?.querySelector('.modal-footer .btn.btn-primary, .modal-footer .btn.btn-danger');
+    if(btn){
+      const original = btn.innerHTML;
+      btn.dataset.original = original;
+      btn.disabled = true;
+      btn.innerHTML = 'Processando…';
+      setTimeout(()=>{ try{btn.disabled=false; btn.innerHTML=btn.dataset.original;}catch{} }, 3500); // fallback caso a navegação seja SPA
+    }
+  }, true);
+</script>
 
-    // Preenche modal de exclusão dinamicamente
+<script>
+(function () {
+  // IDs dos campos dentro do modal
+  const ID_DOC = 'id_cpf_cnpj';
+  const ID_TEL = 'id_telefone';
+
+  const docInput = document.getElementById(ID_DOC);
+  const telInput = document.getElementById(ID_TEL);
+
+  // Helpers
+  const onlyDigits = (v) => (v || '').replace(/\D+/g, '').slice(0, 14);
+
+  function maskCPF(v) {
+    v = v.slice(0, 11);
+    if (v.length <= 3) return v;
+    if (v.length <= 6) return v.replace(/(\d{3})(\d+)/, '$1.$2');
+    if (v.length <= 9) return v.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, function(_, a, b, c, d){ 
+      return d ? `${a}.${b}.${c}-${d}` : `${a}.${b}.${c}`; 
+    });
+  }
+
+  function maskCNPJ(v) {
+    v = v.slice(0, 14);
+    if (v.length <= 2) return v;
+    if (v.length <= 5) return v.replace(/(\d{2})(\d+)/, '$1.$2');
+    if (v.length <= 8) return v.replace(/(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+    if (v.length <= 12) return v.replace(/(\d{2})(\d{3})(\d{3})(\d+)/, '$1.$2.$3/$4');
+    return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, function(_, a,b,c,d,e){ 
+      return e ? `${a}.${b}.${c}/${d}-${e}` : `${a}.${b}.${c}/${d}`; 
+    });
+  }
+
+  function maskDocAuto(raw) {
+    const d = onlyDigits(raw);
+    return d.length > 11 ? maskCNPJ(d) : maskCPF(d);
+  }
+
+  function handleDocInput(e) {
+    const cur = e.target;
+    const masked = maskDocAuto(cur.value);
+    cur.value = masked;
+    cur.setSelectionRange(masked.length, masked.length);
+  }
+
+  // Telefone
+  function maskPhone(v) {
+    const d = (v || '').replace(/\D+/g, '').slice(0, 11);
+    if (d.length <= 2) return `(${d}`;
+    if (d.length <= 6) return d.replace(/(\d{2})(\d+)/, '($1) $2');
+    if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, function(_, a, b, c){ 
+      return c ? `(${a}) ${b}-${c}` : `(${a}) ${b}`; 
+    });
+    return d.replace(/(\d{2})(\d{5})(\d{0,4})/, function(_, a, b, c){ 
+      return c ? `(${a}) ${b}-${c}` : `(${a}) ${b}`; 
+    });
+  }
+
+  function handlePhoneInput(e) {
+    const cur = e.target;
+    const masked = maskPhone(cur.value);
+    cur.value = masked;
+    cur.setSelectionRange(masked.length, masked.length);
+  }
+
+  // Bind quando o modal abrir (pois os campos podem não existir no DOM ainda)
+  document.addEventListener('shown.bs.modal', function (ev) {
+    if (ev.target.id === 'modalNovaConta') {
+      const docInput = document.getElementById(ID_DOC);
+      const telInput = document.getElementById(ID_TEL);
+
+      if (docInput) {
+        docInput.setAttribute('inputmode', 'numeric');
+        docInput.setAttribute('autocomplete', 'on');
+        docInput.setAttribute('placeholder', 'CPF ou CNPJ');
+        docInput.addEventListener('input', handleDocInput);
+      }
+
+      if (telInput) {
+        telInput.setAttribute('inputmode', 'tel');
+        telInput.setAttribute('autocomplete', 'tel');
+        telInput.setAttribute('placeholder', '(00) 00000-0000');
+        telInput.addEventListener('input', handlePhoneInput);
+      }
+    }
+  });
+})();
+</script>
+
+
+{{ block.super }}
+<script>
+  (function() {
+    const input = document.getElementById('dashboard-search');
+    if (!input) return;
+    let t = null;
+    input.addEventListener('input', function() {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const form = input.closest('form');
+        if (form) form.submit();
+      }, 400);
+    });
+  })();
+
   document.addEventListener('show.bs.modal', function (event) {
     const modal = event.target;
     if (modal.id !== 'modalExcluirConta') return;
@@ -263,29 +608,39 @@
     const url = trigger.getAttribute('data-url');
     const label = trigger.getAttribute('data-label');
 
-    const form = modal.querySelector('#formExcluirConta'); // <<< bate com o id do form
+    const form = modal.querySelector('#formExcluirConta');
     const labelEl = modal.querySelector('#excluir-label');
 
     if (form && url) form.setAttribute('action', url);
     if (labelEl && label) labelEl.textContent = label;
 
-    // Foco no campo 'motivo' para agilizar
+    form?.setAttribute('autocomplete', 'off');
+
+    const senhaReal = modal.querySelector('#id_senha');
+    if (senhaReal) {
+      senhaReal.setAttribute('autocomplete', 'new-password');
+      senhaReal.setAttribute('autocapitalize', 'off');
+      senhaReal.setAttribute('autocorrect', 'off');
+      senhaReal.setAttribute('spellcheck', 'false');
+      senhaReal.value = '';
+    }
+
     setTimeout(() => {
       const motivoInput = modal.querySelector('#id_motivo');
       if (motivoInput) motivoInput.focus();
     }, 200);
   });
-  </script>
+</script>
 
-  {% if open_modal %}
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const modalEl = document.getElementById('modalNovaConta');
-      if (modalEl) {
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-      }
-    });
-  </script>
-  {% endif %}
+{% if open_modal %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('modalNovaConta');
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+  });
+</script>
+{% endif %}
 {% endblock %}
