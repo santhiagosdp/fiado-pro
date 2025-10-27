@@ -1,87 +1,115 @@
+{% load humanize %}
 <!doctype html>
 <html lang="pt-br">
-
 <head>
-    <meta charset="utf-8">
-     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <title>Recibo de Pagamento</title>
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            margin: 24px
-        }
+  <meta charset="utf-8">
+  <title>Recibo de Pagamento — FiadoPro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        .box {
-            border: 1px dashed #777;
-            border-radius: 8px;
-            padding: 12px;
-            margin: 12px 0
-        }
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        small {
-            color: #555
-        }
+  <style>
+    :root{
+      --azul-escuro:#0b2447;
+      --azul-medio:#19376d;
+      --azul-claro:#576cbc;
+      --azul-destaque:#a5d7e8;
+    }
 
-        @media print {
-            .no-print {
-                display: none
-            }
-        }
-    </style>
+    body{
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+      background: #f6f7fb;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
 
-    {% if request.GET.print %}
-    <script>
-        window.addEventListener('load', function () {
-            window.print();
-        });
-    </script>
-    {% endif %}
+    /* Cabeçalho bonito (não imprime) */
+    .print-header{
+      background: linear-gradient(180deg, var(--azul-escuro), var(--azul-medio));
+      color: #fff;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.18);
+      margin: 18px auto 12px auto;
+      max-width: 780px;
+    }
+    .print-header .title{ font-weight: 600; letter-spacing: .2px; }
 
+    .doc-container{
+      max-width: 780px;
+      margin: 0 auto 24px auto;
+      padding: 0 16px 24px 16px;
+    }
+
+    .box{
+      border: 1px dashed #c7cce0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      background: #fff;
+    }
+
+    .btn-primary{ background: var(--azul-claro); border: 0; }
+    .btn-primary:hover{ background: var(--azul-destaque); color: var(--azul-escuro); }
+    .btn-outline-dark{ border-color:#c7cce0; color:#2a2f45; }
+    .btn-outline-dark:hover{ background:#eef2ff; border-color:#c7cce0; color:#1d2340; }
+
+    @media print{
+      .no-print{ display: none !important; }
+      body{ background: #fff; }
+      .print-header{
+        box-shadow: none;
+        border-radius: 0;
+        margin: 0 0 8px 0;
+      }
+      .doc-container{ padding: 0; margin: 0 16px; }
+    }
+  </style>
+
+  {% if request.GET.print %}
+  <script>
+    window.addEventListener('load', function () { window.print(); });
+  </script>
+  {% endif %}
 </head>
 
 <body>
 
-     <div class="row">
-        <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="{% url 'carteira:dashboard' %}">FiadoPro</a>
-            </div>
-        </nav>
+  <!-- Header com ações (não imprime) -->
+  <header class="print-header no-print">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="title mb-0">🧾 Recibo de Pagamento — FiadoPro</h5>
+      <div class="d-flex gap-2">
+        <a href="{% url 'carteira:dashboard' %}" class="btn btn-outline-dark btn-sm">Voltar ao dashboard</a>
+        <button class="btn btn-primary btn-sm" onclick="window.print()">Imprimir</button>
+      </div>
     </div>
-    <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <button class="btn btn-success no-print" onclick="window.print()">Imprimir Recibo do Cliente</button>
-    <a href="{% url 'carteira:dashboard' %}" class="btn btn-secondary no-print">Voltar ao dashboard</a>
-  </div>
-    </div>
+  </header>
 
-    <h2 style="text-align:center;">Recibo de Pagamento</h2>
+  <main class="doc-container">
+    <h4 class="text-center my-3">Recibo de Pagamento</h4>
 
-     <!-- DADOS DA EMPRESA-->
-        <div class="box">
-            <div>
-                <strong>Empresa: {{ empresa.nome }}</strong>
-            </div>
-            <div>
-                <span> <strong>CNPJ/CPF: </strong>{{ empresa.cnpj_cpf}}</span>
-            </div>
-            <div>
-                <span> <strong>Telefone: </strong>{{ empresa.telefone }}</span>
-            </div>
-            <div>
-                <span> <strong>Endereço: </strong>{{ empresa.endereco }}</span>
-            </div>
-        </div>
+    <!-- Empresa -->
+    <section class="box">
+      <div class="fw-semibold">Empresa: {{ empresa.nome }}</div>
+      <div><strong>CNPJ/CPF:</strong> {{ empresa.cnpj_cpf }}</div>
+      <div><strong>Telefone:</strong> {{ empresa.telefone }}</div>
+      <div><strong>Endereço:</strong> {{ empresa.endereco }}</div>
+    </section>
 
-        <!-- DADOS DO CLIENTE-->
-    <div class="box">
-        <div>Conta: <strong>#{{ pg.conta.id }}</strong> — Cliente: <strong>{{ pg.conta.cliente.nome }}</strong></div>
-        <div>Data: {{ pg.data|date:'d/m/Y H:i' }}</div>
-        <div>Valor pago: <strong>R$ {{ pg.valor }}</strong></div>
-        <div>Observação: {{ pg.observacao }}</div>
-    </div>
-    <p>Comprovamos o recebimento do valor acima referente à conta citada.</p>
+    <!-- Dados do pagamento -->
+    <section class="box">
+      <div><strong>Conta:</strong> #{{ pg.conta.id }} — <strong>Cliente:</strong> {{ pg.conta.cliente.nome }}</div>
+      <div><strong>Data:</strong> {{ pg.data|date:'d/m/Y H:i' }}</div>
+      <div><strong>Valor pago:</strong> R$ {{ pg.valor|floatformat:2|intcomma }}</div>
+      <div><strong>Observação:</strong> {{ pg.observacao|default:"—" }}</div>
+    </section>
+
+    <p class="mt-3">Comprovamos o recebimento do valor acima referente à conta citada.</p>
+  </main>
 
 </body>
-
 </html>

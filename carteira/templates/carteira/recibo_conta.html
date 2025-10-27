@@ -1,163 +1,201 @@
+{% load humanize %}
 <!doctype html>
 <html lang="pt-br">
-
 <head>
-    <meta charset="utf-8">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <title>Comprovante de Venda (Fiado)</title>
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            margin: 24px
-        }
+  <meta charset="utf-8">
+  <title>Comprovante de Venda (Fiado) — FiadoPro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        .r {
-            display: flex;
-            justify-content: space-between
-        }
+  <!-- Bootstrap (mantemos local para print estável) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        .box {
-            border: 1px dashed #777;
-            border-radius: 8px;
-            padding: 12px;
-            margin: 12px 0
-        }
+  <style>
+    :root{
+      --azul-escuro:#0b2447;
+      --azul-medio:#19376d;
+      --azul-claro:#576cbc;
+      --azul-destaque:#a5d7e8;
+    }
 
-        small {
-            color: #555
-        }
+    body{
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+      background: #f6f7fb;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse
-        }
+    /* Cabeçalho do comprovante (visual consistente, mas amigável à impressão) */
+    .print-header{
+      background: linear-gradient(180deg, var(--azul-escuro), var(--azul-medio));
+      color: #fff;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.18);
+      margin: 18px auto 12px auto;
+      max-width: 980px;
+    }
+    .print-header .title{ font-weight: 600; letter-spacing: .2px; }
 
-        th,
-        td {
-            padding: 6px;
-            border: 1px solid #000
-        }
+    .doc-container{
+      max-width: 980px;
+      margin: 0 auto 24px auto;
+      padding: 0 16px 24px 16px;
+    }
 
-        .num {
-            text-align: right
-        }
+    /* Caixas (compatível com o dashboard .box) */
+    .box{
+      border: 1px dashed #c7cce0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      background: #fff;
+    }
 
-        @media print {
+    /* Tabela */
+    .table th{
+      background: #f3f5ff !important;
+      color: #2a2f45;
+      border-bottom: 1px solid #e5e7f0 !important;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .table td.text-end, .table th.text-end{ text-align: right; }
+    .table-hover tbody tr:hover{ background: #f9fbff; }
 
-            .no-print,
-            .btn,
-            .footer {
-                display: none !important;
-            }
+    /* Botões */
+    .btn-primary{ background: var(--azul-claro); border: 0; }
+    .btn-primary:hover{ background: var(--azul-destaque); color: var(--azul-escuro); }
+    .btn-outline-dark{ border-color:#c7cce0; color:#2a2f45; }
+    .btn-outline-dark:hover{ background:#eef2ff; border-color:#c7cce0; color:#1d2340; }
 
-            body {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-        }
-    </style>
+    /* Área de assinatura */
+    .assinatura{
+      margin-top: 48px;
+    }
+    .assinatura .linha{
+      border-top: 1px solid #111;
+      height: 1px;
+      width: 100%;
+      margin-bottom: 6px;
+    }
 
-    {% if request.GET.print %}
-    <script>
-        window.addEventListener('load', function () {
-            window.print();
-        });
-    </script>
-    {% endif %}
-    
+    /* Ocultar elementos na impressão */
+    @media print{
+      .no-print{ display: none !important; }
+      body{ background: #fff; }
+      .print-header{
+        box-shadow: none;
+        border-radius: 0;
+        margin: 0 0 8px 0;
+      }
+      .doc-container{ padding: 0; margin: 0 16px; }
+      .table th{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+
+  {% if request.GET.print %}
+  <script>
+    window.addEventListener('load', function () {
+      window.print();
+    });
+  </script>
+  {% endif %}
 </head>
 
 <body>
-    <div class="row">
-        <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="{% url 'carteira:dashboard' %}">FiadoPro</a>
-            </div>
-        </nav>
+
+  <!-- Cabeçalho (substitui a navbar para ficar bonito e imprimir bem) -->
+  <header class="print-header no-print">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="title mb-0">🧾 Comprovante de Venda — FiadoPro</h5>
+      <div class="d-flex gap-2">
+        <a href="{% url 'carteira:dashboard' %}" class="btn btn-outline-light btn-sm">Voltar ao Início</a>
+        <button class="btn btn-primary btn-sm" onclick="window.print()">Imprimir</button>
+      </div>
     </div>
-    <br>
-    <h2 style="text-align:center;">Comprovante de Venda — Fiado</h2>
+  </header>
 
-    <!-- BOTOES - NAO APARECE NA IMPRESSAO-->
+  <main class="doc-container">
+    <!-- Título para quem abrir direto (aparece também na impressão) -->
+    <h4 class="text-center my-3">Comprovante de Venda - Em Carteira</h4>
 
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <a href="{% url 'carteira:dashboard' %}" class="btn btn-secondary no-print">Voltar ao dashboard</a>
-            <button class="btn btn-success no-print" onclick="window.print()">Imprimir Comprovante de Venda</button>
-        </div>
+    <!-- Empresa -->
+    <section class="box">
+      <div class="fw-semibold">Empresa: {{ empresa.nome }}</div>
+      <div><strong>CNPJ/CPF:</strong> {{ empresa.cnpj_cpf }}</div>
+      <div><strong>Telefone:</strong> {{ empresa.telefone }}</div>
+      <div><strong>Endereço:</strong> {{ empresa.endereco }}</div>
+    </section>
 
-        <!-- DADOS DA EMPRESA-->
-        <div class="box">
-            <div>
-                <strong>Empresa: {{ empresa.nome }}</strong>
-            </div>
-            <div>
-                <span> <strong>CNPJ/CPF: </strong>{{ empresa.cnpj_cpf}}</span>
-            </div>
-            <div>
-                <span> <strong>Telefone: </strong>{{ empresa.telefone }}</span>
-            </div>
-            <div>
-                <span> <strong>Endereço: </strong>{{ empresa.endereco }}</span>
-            </div>
-        </div>
+    <!-- Conta / Cliente -->
+    <section class="box">
+      <div class="d-flex justify-content-between">
+        <div class="fw-semibold">Conta #{{ conta.id }}</div>
+        <div><strong>Data:</strong> {{ conta.criado_em|date:'d/m/Y' }}</div>
+      </div>
+      <div class="mt-1">
+        <strong>Cliente:</strong> {{ conta.cliente.nome }}
+        &nbsp;—&nbsp; CPF: {{ conta.cliente.cpf }}
+        &nbsp;—&nbsp; Tel: {{ conta.cliente.telefone }}
+      </div>
+      <div class="mt-1"><strong>Vencimento:</strong> {{ conta.vencimento|date:'d/m/Y' }}</div>
+    </section>
 
-        <!-- DADOS DO CLIENTE-->
-        <div class="box">
-            <div class="r">
-                <strong>Conta #{{ conta.id }}</strong>
-                <span>Data: {{ conta.criado_em|date:'d/m/Y' }}</span>
-            </div>
-            <div>
-                Cliente: <strong>{{ conta.cliente.nome }}</strong>
-                — CPF: {{ conta.cliente.cpf }}
-                — Tel: {{ conta.cliente.telefone }}
-            </div>
-            <div>Vencimento: {{ conta.vencimento|date:'d/m/Y' }}</div>
-        </div>
-        <!-- -->
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Produto</th>
-                    <th class="num">Qtd</th>
-                    <th class="num">Unit</th>
-                    <th class="num">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for i in conta.itens.all %}
-                <tr>
-                    <td>{{ i.produto }}</td>
-                    <td class="num">{{ i.quantidade }}</td>
-                    <td class="num">R$ {{ i.valor_unit|floatformat:2 }}</td>
-                    <td class="num">R$ {{ i.subtotal|floatformat:2 }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="text-align:center; color:#555">Sem itens</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="3" class="num"><strong>Total</strong></td>
-                    <td class="num"><strong>R$ {{ conta.total|floatformat:2 }}</strong></td>
-                </tr>
-            </tfoot>
+    <!-- Itens -->
+    <section class="box p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th class="text-center">Qtd</th>
+              <th class="text-end">Unit.</th>
+              <th class="text-end">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in conta.itens.all %}
+            <tr>
+              <td>{{ i.produto }}</td>
+              <td class="text-center">{{ i.quantidade }}</td>
+              <td class="text-end">R$ {{ i.valor_unit|floatformat:2|intcomma }}</td>
+              <td class="text-end">R$ {{ i.subtotal|floatformat:2|intcomma }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-3">Sem itens</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="3" class="text-end">Total</th>
+              <th class="text-end">R$ {{ conta.total|floatformat:2|intcomma }}</th>
+            </tr>
+          </tfoot>
         </table>
+      </div>
+    </section>
 
-        <div class="box">
-            <p>Declaro que recebi os produtos acima e me responsabilizo pelo pagamento até a data do vencimento.</p>
-            <p style="margin-top:48px">
-                _________________________________________<br>
-                Assinatura do Devedor
-            </p>
-            <small>Comércio: via do estabelecimento — Cliente: via do cliente</small>
-        </div>
+    <!-- Declaração e assinatura -->
+    <section class="box">
+      <p class="mb-3">
+        Declaro que recebi os produtos acima e me responsabilizo pelo pagamento até a data do vencimento.
+      </p>
 
+      <div class="assinatura">
+        <div class="linha"></div>
+        <div>Assinatura do Devedor</div>
+      </div>
+
+      <small class="d-block mt-3 text-muted">
+        Comércio: via do estabelecimento — Cliente: via do cliente
+      </small>
+    </section>
+  </main>
 
 </body>
-
 </html>
