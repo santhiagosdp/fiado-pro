@@ -1,3 +1,8 @@
+# ==========================================
+# 💻 Projeto: Fiado-Pro (Django)
+# Protege arquivos sensíveis e desnecessários
+# ==========================================
+
 # --- Banco de dados locais ---
 db.sqlite3
 *.sqlite3
@@ -5,17 +10,42 @@ db.sqlite3
 
 # --- Configurações sensíveis ---
 fiado_pro/settings.py
+fiado_pro/settings_local.py
 .env
 
-# --- Arquivos de ambiente virtual ---
+# --- Ambiente virtual ---
 venv/
 .venv/
 env/
 .env/
+Scripts/
+Lib/
+Include/
+
+# --- Compilação e cache do Python ---
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.log
 
 # --- Arquivos estáticos e temporários ---
 staticfiles/
 media/
 *.log
+*.pot
+*.pyc
+.DS_Store
+Thumbs.db
+
+# --- Arquivos de IDEs (VS Code, PyCharm, etc.) ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Arquivos de sistema ---
+*.bak
+*.swp
+*.tmp
+*.orig
+*~
