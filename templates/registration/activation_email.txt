@@ -1,0 +1,8 @@
+Olá {{ user.get_username }},
+
+Recebemos seu cadastro no Fiado Pro para a empresa "{{ empresa.nome }}".
+Ative sua conta clicando no link abaixo:
+
+{{ link_ativacao }}
+
+Se você não solicitou este cadastro, ignore este e-mail.

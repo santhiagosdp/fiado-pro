@@ -12,6 +12,12 @@ from .forms import ClienteForm, ContaForm, ItemFormSet, PagamentoForm, DeleteCon
 from .utils import log_event
 
 
+## criacao de novo usuario para login
+
+
+
+
+
 @login_required
 def dashboard(request):
     q = request.GET.get("q", "").strip()
