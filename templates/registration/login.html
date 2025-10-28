@@ -1,6 +1,7 @@
 {% load static %}
 <!doctype html>
 <html lang="pt-br">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -106,8 +107,12 @@
       <div class="mt-3 text-center">
         <a href="{% url 'signup' %}">Criar conta</a>
       </div>
+      <div class="mt-3 text-center">
+        <a href="{% url 'password_reset' %}">Esqueci minha senha</a>
+      </div>
       <p class="text-center mt-3 text-muted">© {{ now|date:"Y" }} FiadoPro</p>
     </div>
   </div>
 </body>
+
 </html>
