@@ -1,0 +1,21 @@
+# --- Banco de dados locais ---
+db.sqlite3
+*.sqlite3
+*.db
+
+# --- Configurações sensíveis ---
+fiado_pro/settings.py
+.env
+
+# --- Arquivos de ambiente virtual ---
+venv/
+.venv/
+env/
+.env/
+__pycache__/
+*.pyc
+
+# --- Arquivos estáticos e temporários ---
+staticfiles/
+media/
+*.log
