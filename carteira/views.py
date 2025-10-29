@@ -323,13 +323,14 @@ def historico(request):
 # carteira/views.py
 
 from django.contrib.auth import get_user_model
-
 User = get_user_model()
 
+#@login_required
 def _rand_money(min_cent=1000, max_cent=200000):
     # valores entre 10,00 e 2.000,00
     return Decimal(random.randint(min_cent, max_cent)) / Decimal(100)
 
+#@login_required
 def _ensure_clientes(qtd, prefixo):
     clientes = []
     for i in range(qtd):
@@ -338,8 +339,9 @@ def _ensure_clientes(qtd, prefixo):
         clientes.append(c)
     return clientes
 
-@staff_member_required
+#@staff_member_required
 @require_GET
+#@login_required
 def seed_contas_fixas(request):
     """
     Cria 30 contas para testes do usuário logado (request.user):
