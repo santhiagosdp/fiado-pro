@@ -15,4 +15,7 @@ urlpatterns = [
     path("excluidos/", views.excluidos, name="excluidos"),  # + NEW
     path("conta/<int:conta_id>/restaurar/", views.restaurar_conta, name="restaurar_conta"),
     path("historico/", views.historico, name="historico"),
+
+    #contas testes
+    path("teste/", views.seed_contas_fixas, name="seed_contas_fixas"),
 ]

@@ -11,11 +11,14 @@ from django.contrib.auth import authenticate  # opcional
 from .forms import ClienteForm, ContaForm, ItemFormSet, PagamentoForm, DeleteConfirmForm  # + DeleteConfirmForm
 from .utils import log_event
 
-
-## criacao de novo usuario para login
-
-
-
+# carteira/views.py
+from datetime import timedelta
+from decimal import Decimal
+import random
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+####
 
 
 @login_required
@@ -312,3 +315,119 @@ def historico(request):
         base = base.filter(descricao__icontains=q)
     logs = base.order_by("-created_at", "-id")[:500]
     return render(request, "carteira/historico.html", {"logs": logs, "q": q})
+
+
+
+
+### criacao de 30 contas carteira para teste no usuario conectado
+# carteira/views.py
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+def _rand_money(min_cent=1000, max_cent=200000):
+    # valores entre 10,00 e 2.000,00
+    return Decimal(random.randint(min_cent, max_cent)) / Decimal(100)
+
+def _ensure_clientes(qtd, prefixo):
+    clientes = []
+    for i in range(qtd):
+        nome = f"{prefixo} {i+1:02d}"
+        c, _ = Cliente.objects.get_or_create(nome=nome)
+        clientes.append(c)
+    return clientes
+
+@staff_member_required
+@require_GET
+def seed_contas_fixas(request):
+    """
+    Cria 30 contas para testes do usuário logado (request.user):
+    - 5 com status PAGO (saldo=0, vencidas no passado)
+    - 10 com status ATRASO (saldo>0, vencimento no passado)
+    - 15 com status EM_ABERTO (saldo>0, vencimento no futuro)
+
+    Parâmetros opcionais:
+      ?pago=5&atraso=10&aberto=15
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False, "error": "auth required"}, status=401)
+
+    n_pago   = int(request.GET.get("pago",   5))
+    n_atraso = int(request.GET.get("atraso", 10))
+    n_aberto = int(request.GET.get("aberto", 15))
+
+    hoje = timezone.localdate()
+
+    # cria alguns clientes de apoio (apenas nomes; ajuste se Cliente exigir mais campos)
+    clientes_pago   = _ensure_clientes(max(n_pago, 1),   "Cliente Seed Pago")
+    clientes_atraso = _ensure_clientes(max(n_atraso, 1), "Cliente Seed Atraso")
+    clientes_aberto = _ensure_clientes(max(n_aberto, 1), "Cliente Seed Aberto")
+
+    criadas = {"PAGO": [], "ATRASO": [], "EM_ABERTO": []}
+
+    # --- 1) Quitadas (PAGO) ---
+    objs = []
+    for i in range(n_pago):
+        total = _rand_money()
+        criado_em = hoje - timedelta(days=random.randint(1, 120))
+        venc = hoje - timedelta(days=random.randint(1, 90))
+        objs.append(ContaCarteira(
+            owner=request.user,
+            cliente=clientes_pago[i % len(clientes_pago)],
+            criado_em=criado_em,
+            vencimento=venc,
+            total=total,
+            saldo=Decimal("0.00"),
+            status="PAGO",
+        ))
+    created = ContaCarteira.objects.bulk_create(objs, batch_size=200)
+    criadas["PAGO"] = [c.id for c in created]
+
+    # --- 2) Em atraso (ATRASO) ---
+    objs = []
+    for i in range(n_atraso):
+        total = _rand_money()
+        criado_em = hoje - timedelta(days=random.randint(1, 120))
+        venc = hoje - timedelta(days=random.randint(1, 60))  # passado
+        objs.append(ContaCarteira(
+            owner=request.user,
+            cliente=clientes_atraso[i % len(clientes_atraso)],
+            criado_em=criado_em,
+            vencimento=venc,
+            total=total,
+            saldo=total,    # nada pago ainda
+            status="ATRASO",
+        ))
+    created = ContaCarteira.objects.bulk_create(objs, batch_size=200)
+    criadas["ATRASO"] = [c.id for c in created]
+
+    # --- 3) Em aberto (EM_ABERTO) ---
+    objs = []
+    for i in range(n_aberto):
+        total = _rand_money()
+        criado_em = hoje - timedelta(days=random.randint(0, 30))
+        venc = hoje + timedelta(days=random.randint(1, 180))  # futuro
+        objs.append(ContaCarteira(
+            owner=request.user,
+            cliente=clientes_aberto[i % len(clientes_aberto)],
+            criado_em=criado_em,
+            vencimento=venc,
+            total=total,
+            saldo=total,
+            status="EM_ABERTO",
+        ))
+    created = ContaCarteira.objects.bulk_create(objs, batch_size=200)
+    criadas["EM_ABERTO"] = [c.id for c in created]
+
+    resumo = {
+        "totais": {
+            "PAGO": len(criadas["PAGO"]),
+            "ATRASO": len(criadas["ATRASO"]),
+            "EM_ABERTO": len(criadas["EM_ABERTO"]),
+            "GERAL": len(criadas["PAGO"]) + len(criadas["ATRASO"]) + len(criadas["EM_ABERTO"]),
+        },
+        "owner": request.user.username,
+    }
+    #return JsonResponse({"ok": True, "criadas": criadas, "resumo": resumo}, status=201)
+    return redirect("carteira:dashboard")
