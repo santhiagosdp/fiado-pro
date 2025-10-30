@@ -2,8 +2,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db import transaction
 from django.contrib import messages
-from django.db.models import Q
 from django.views.decorators.http import require_POST
+from django.db.models import Sum, Case, When, DecimalField, F, Q
 from django.contrib.auth.decorators import login_required  # NEW
 from .models import Cliente, ContaCarteira, ItemVenda, Pagamento, Empresa, AuditLog
 from django.utils import timezone
@@ -21,43 +21,124 @@ from django.views.decorators.http import require_GET
 ####
 
 
-@login_required
-def dashboard(request):
-    q = request.GET.get("q", "").strip()
 
-    base = (ContaCarteira.objects
-            .filter(owner=request.user, is_deleted=False)  # garante esconder excluídos
-            .select_related("cliente"))
-    base_atrasados = base.filter(status="ATRASO")
-    base_em_aberto = base.filter(status="EM_ABERTO")
-    base_quitados  = base.filter(status="PAGO")
+ALLOWED_SORTS = {"id": "id", "nome": "cliente__nome", "vencimento": "vencimento"}
+
+
+def _apply_filters(qs, params):
+    q = params.get("q", "").strip()
+    status = params.get("status", "").strip()
+    venc_ini = params.get("venc_ini", "").strip()
+    venc_fim = params.get("venc_fim", "").strip()
 
     if q:
-        name_filter = Q(cliente__nome__icontains=q)
-        atrasados = base_atrasados.filter(name_filter)
-        em_aberto = base_em_aberto.filter(name_filter)
-        quitados  = base_quitados.filter(name_filter)
-    else:
-        atrasados = base_atrasados
-        em_aberto = base_em_aberto
-        quitados  = base_quitados
+        qs = qs.filter(Q(cliente__nome__icontains=q) | Q(id__icontains=q))
+    if status in {"EM_ABERTO", "PAGO", "ATRASO"}:
+        qs = qs.filter(status=status)
+    if venc_ini:
+        qs = qs.filter(vencimento__gte=venc_ini)
+    if venc_fim:
+        qs = qs.filter(vencimento__lte=venc_fim)
+    return qs
 
-    cform = ClienteForm()
-    conta_form = ContaForm()
-    formset = ItemFormSet(prefix="itens")
-    del_form = DeleteConfirmForm()  # + NEW
 
-    return render(request, "carteira/dashboard.html", {
-        "q": q,
-        "atrasados": atrasados.order_by("vencimento", "id"),
-        "quitados": quitados.order_by("vencimento", "id"),
-        "em_aberto": em_aberto.order_by("vencimento", "id"),
-        "cform": cform,
-        "conta_form": conta_form,
-        "formset": formset,
-        "del_form": del_form,        # + NEW
-        "open_modal": False,
-    })
+def _order_qs(qs, sort_key, direction):
+    field = ALLOWED_SORTS.get(sort_key, "id")
+    prefix = "" if direction == "asc" else "-"
+    # tiebreaker por ID para estabilidade
+    return qs.order_by(f"{prefix}{field}", f"{'-' if direction=='desc' else ''}id")
+
+
+@login_required
+def dashboard(request):
+    sort_key = request.GET.get("sort", "id").lower()
+    direction = request.GET.get("dir", "desc").lower()
+    if sort_key not in ALLOWED_SORTS:
+        sort_key = "id"
+    if direction not in {"asc", "desc"}:
+        direction = "desc"
+
+    base_qs = ContaCarteira.objects.filter(owner=request.user, is_deleted=False)
+    qs = _apply_filters(base_qs, request.GET)
+
+    # --- AGREGADOS (respeitam o filtro) ---
+    agg = qs.aggregate(
+        total_face=Sum("total", default=Decimal("0.00")),
+        total_saldo=Sum("saldo", default=Decimal("0.00")),
+        total_quitado=Sum(
+            Case(
+                When(status="PAGO", then=F("total")),
+                default=Decimal("0.00"),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+            default=Decimal("0.00"),
+        ),
+        total_em_aberto=Sum(
+            Case(
+                When(status="EM_ABERTO", then=F("saldo")),
+                default=Decimal("0.00"),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+            default=Decimal("0.00"),
+        ),
+        total_em_atraso=Sum(
+            Case(
+                When(status="ATRASO", then=F("saldo")),
+                default=Decimal("0.00"),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+            default=Decimal("0.00"),
+        ),
+    )
+    a_receber = (agg["total_em_aberto"] or Decimal("0")) + (agg["total_em_atraso"] or Decimal("0"))
+
+    # --- SUBLISTAS COM A MESMA ORDENAÇÃO ---
+    atrasados = _order_qs(qs.filter(status="ATRASO"), sort_key, direction).select_related("cliente")
+    em_aberto = _order_qs(qs.filter(status="EM_ABERTO"), sort_key, direction).select_related("cliente")
+    quitados = _order_qs(qs.filter(status="PAGO"), sort_key, direction).select_related("cliente")
+
+    # --- base_params: preserva filtros, remove sort/dir p/ reconstruir links ---
+    base_params_qd = request.GET.copy()
+    base_params_qd.pop("sort", None)
+    base_params_qd.pop("dir", None)
+    base_params = base_params_qd.urlencode()
+
+    # ícones e próximos estados por coluna
+    def _icon(col):
+        if sort_key != col:
+            return ""
+        return "▲" if direction == "asc" else "▼"
+
+    def _next(col):
+        # se já está ordenando por col, alterna; senão, começa desc (padrão que usamos)
+        if sort_key == col:
+            return "asc" if direction == "desc" else "desc"
+        return "desc"
+
+    context = {
+        "q": request.GET.get("q", ""),
+        "atrasados": atrasados,
+        "em_aberto": em_aberto,
+        "quitados": quitados,
+
+        "totais": {
+            "a_receber": a_receber,
+            "em_aberto": agg["total_em_aberto"] or Decimal("0"),
+            "em_atraso": agg["total_em_atraso"] or Decimal("0"),
+            "quitado": agg["total_quitado"] or Decimal("0"),
+            "face_value_total": agg["total_face"] or Decimal("0"),
+            "saldo_total": agg["total_saldo"] or Decimal("0"),
+        },
+
+        "base_params": base_params,
+        "sort": {
+            "current": sort_key,
+            "dir": direction,
+            "icon": {"id": _icon("id"), "nome": _icon("nome"), "vencimento": _icon("vencimento")},
+            "next": {"id": _next("id"), "nome": _next("nome"), "vencimento": _next("vencimento")},
+        },
+    }
+    return render(request, "carteira/dashboard.html", context)
 
  
 def _get_conta_or_404(user, conta_id, include_deleted=False):
@@ -319,6 +400,12 @@ def historico(request):
 
 
 
+
+
+
+
+
+
 ### criacao de 30 contas carteira para teste no usuario conectado
 # carteira/views.py
 
@@ -338,6 +425,8 @@ def _ensure_clientes(qtd, prefixo):
         c, _ = Cliente.objects.get_or_create(nome=nome)
         clientes.append(c)
     return clientes
+
+
 
 #@staff_member_required
 @require_GET
