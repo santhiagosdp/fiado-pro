@@ -14,23 +14,21 @@ class ClienteForm(forms.ModelForm):
         widgets = {
             "nome": forms.TextInput(attrs={
                 "class": "form-control",
-                "placeholder": "Nome do cliente"
+                "placeholder": "Nome do cliente",
             }),
-            # Mantém o nome do campo como 'cpf' (model), mas dá o ID que o JS usa: 'id_cpf_cnpj'
             "cpf": forms.TextInput(attrs={
+                "id": "id_cpf_cnpj",            # bate com seu JS
                 "class": "form-control",
-                "id": "id_cpf_cnpj",
-                "placeholder": "CPF ou CNPJ",
+                "placeholder": "000.000.000-00 ou 00.000.000/0000-00",
                 "inputmode": "numeric",
                 "autocomplete": "on",
             }),
             "telefone": forms.TextInput(attrs={
+                "id": "id_telefone",            # bate com seu JS
                 "class": "form-control",
-                "id": "id_telefone",
-                "placeholder": "(00) 00000-0000",
+                "placeholder": "(63) 9 0000-0000",
                 "inputmode": "tel",
                 "autocomplete": "tel",
-                "maxlength": "16",  # suficiente para (00) 00000-0000
             }),
         }
 
@@ -68,7 +66,7 @@ class ContaForm(forms.ModelForm):
         widgets = {
             "vencimento": forms.DateInput(attrs={
                 "class": "form-control",
-                "type": "date"
+                "type": "date",
             }),
         }
 

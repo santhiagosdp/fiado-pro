@@ -3,13 +3,16 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.db import transaction
 from django.contrib import messages
 from django.views.decorators.http import require_POST
-from django.db.models import Sum, Case, When, DecimalField, F, Q
+from django.db.models import Sum, Case, When, DecimalField, F, Q, ExpressionWrapper
 from django.contrib.auth.decorators import login_required  # NEW
 from .models import Cliente, ContaCarteira, ItemVenda, Pagamento, Empresa, AuditLog
 from django.utils import timezone
 from django.contrib.auth import authenticate  # opcional
-from .forms import ClienteForm, ContaForm, ItemFormSet, PagamentoForm, DeleteConfirmForm  # + DeleteConfirmForm
+from .forms import ClienteForm, ContaForm, ItemFormSet, PagamentoForm, DeleteConfirmForm, ItemInlineForm  # + DeleteConfirmForm
 from .utils import log_event
+from django.forms import formset_factory
+ItemFormSet = formset_factory(ItemInlineForm, extra=1, can_delete=True)
+
 
 # carteira/views.py
 from datetime import timedelta
@@ -21,11 +24,12 @@ from django.views.decorators.http import require_GET
 ####
 
 
-
+DEC = DecimalField(max_digits=12, decimal_places=2)
 ALLOWED_SORTS = {"id": "id", "nome": "cliente__nome", "vencimento": "vencimento"}
 
 
 def _apply_filters(qs, params):
+        
     q = params.get("q", "").strip()
     status = params.get("status", "").strip()
     venc_ini = params.get("venc_ini", "").strip()
@@ -43,9 +47,9 @@ def _apply_filters(qs, params):
 
 
 def _order_qs(qs, sort_key, direction):
+    ALLOWED_SORTS = {"id": "id", "nome": "cliente__nome", "vencimento": "vencimento"}
     field = ALLOWED_SORTS.get(sort_key, "id")
     prefix = "" if direction == "asc" else "-"
-    # tiebreaker por ID para estabilidade
     return qs.order_by(f"{prefix}{field}", f"{'-' if direction=='desc' else ''}id")
 
 
@@ -53,90 +57,65 @@ def _order_qs(qs, sort_key, direction):
 def dashboard(request):
     sort_key = request.GET.get("sort", "id").lower()
     direction = request.GET.get("dir", "desc").lower()
-    if sort_key not in ALLOWED_SORTS:
-        sort_key = "id"
-    if direction not in {"asc", "desc"}:
-        direction = "desc"
 
     base_qs = ContaCarteira.objects.filter(owner=request.user, is_deleted=False)
     qs = _apply_filters(base_qs, request.GET)
 
-    # --- AGREGADOS (respeitam o filtro) ---
+    # *** pago = total - saldo (independe de status) ***
+    pago_expr = ExpressionWrapper(F("total") - F("saldo"), output_field=DEC)
+
+    # —— Totalizador (respeita filtro atual) ——
     agg = qs.aggregate(
         total_face=Sum("total", default=Decimal("0.00")),
         total_saldo=Sum("saldo", default=Decimal("0.00")),
-        total_quitado=Sum(
-            Case(
-                When(status="PAGO", then=F("total")),
-                default=Decimal("0.00"),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
-            ),
-            default=Decimal("0.00"),
-        ),
+        total_pago=Sum(pago_expr, default=Decimal("0.00")),  # << AQUI
         total_em_aberto=Sum(
-            Case(
-                When(status="EM_ABERTO", then=F("saldo")),
-                default=Decimal("0.00"),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
-            ),
+            Case(When(status="EM_ABERTO", then=F("saldo")), default=Decimal("0.00"), output_field=DEC),
             default=Decimal("0.00"),
         ),
         total_em_atraso=Sum(
-            Case(
-                When(status="ATRASO", then=F("saldo")),
-                default=Decimal("0.00"),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
-            ),
+            Case(When(status="ATRASO", then=F("saldo")), default=Decimal("0.00"), output_field=DEC),
             default=Decimal("0.00"),
         ),
     )
     a_receber = (agg["total_em_aberto"] or Decimal("0")) + (agg["total_em_atraso"] or Decimal("0"))
 
-    # --- SUBLISTAS COM A MESMA ORDENAÇÃO ---
-    atrasados = _order_qs(qs.filter(status="ATRASO"), sort_key, direction).select_related("cliente")
-    em_aberto = _order_qs(qs.filter(status="EM_ABERTO"), sort_key, direction).select_related("cliente")
-    quitados = _order_qs(qs.filter(status="PAGO"), sort_key, direction).select_related("cliente")
+    # —— Listas por status + anotação de “pago” para mostrar nas tabelas se quiser ——
+    qs_annot = qs.annotate(pago=pago_expr)  # << paga em cada linha
+    atrasados = _order_qs(qs_annot.filter(status="ATRASO"), sort_key, direction).select_related("cliente")
+    em_aberto = _order_qs(qs_annot.filter(status="EM_ABERTO"), sort_key, direction).select_related("cliente")
+    quitados = _order_qs(qs_annot.filter(status="PAGO"), sort_key, direction).select_related("cliente")
 
-    # --- base_params: preserva filtros, remove sort/dir p/ reconstruir links ---
-    base_params_qd = request.GET.copy()
-    base_params_qd.pop("sort", None)
-    base_params_qd.pop("dir", None)
+    # Params para manter filtros nos links de ordenação
+    base_params_qd = request.GET.copy(); base_params_qd.pop("sort", None); base_params_qd.pop("dir", None)
     base_params = base_params_qd.urlencode()
-
-    # ícones e próximos estados por coluna
-    def _icon(col):
-        if sort_key != col:
-            return ""
-        return "▲" if direction == "asc" else "▼"
-
-    def _next(col):
-        # se já está ordenando por col, alterna; senão, começa desc (padrão que usamos)
-        if sort_key == col:
-            return "asc" if direction == "desc" else "desc"
-        return "desc"
+    def _icon(col): return "▲" if request.GET.get("sort")==col and request.GET.get("dir")=="asc" else ("▼" if request.GET.get("sort")==col else "")
+    def _next(col): 
+        cur = request.GET.get("sort"); d = request.GET.get("dir","desc")
+        return "asc" if cur==col and d=="desc" else "desc"
 
     context = {
         "q": request.GET.get("q", ""),
-        "atrasados": atrasados,
-        "em_aberto": em_aberto,
-        "quitados": quitados,
-
+        "atrasados": atrasados, "em_aberto": em_aberto, "quitados": quitados,
         "totais": {
+            "pago": agg["total_pago"] or Decimal("0"),            # << usado no card “Quitado”
             "a_receber": a_receber,
             "em_aberto": agg["total_em_aberto"] or Decimal("0"),
             "em_atraso": agg["total_em_atraso"] or Decimal("0"),
-            "quitado": agg["total_quitado"] or Decimal("0"),
             "face_value_total": agg["total_face"] or Decimal("0"),
             "saldo_total": agg["total_saldo"] or Decimal("0"),
         },
-
         "base_params": base_params,
         "sort": {
-            "current": sort_key,
-            "dir": direction,
+            "current": request.GET.get("sort","id"),
+            "dir": request.GET.get("dir","desc"),
             "icon": {"id": _icon("id"), "nome": _icon("nome"), "vencimento": _icon("vencimento")},
             "next": {"id": _next("id"), "nome": _next("nome"), "vencimento": _next("vencimento")},
         },
+        # >>> IMPORTANTÍSSIMO para o modal (ver item 2):
+        "cliente_form": ClienteForm(),  # ver import logo abaixo
+        "conta_form": ContaForm(),
+        "item_formset": ItemFormSet(prefix="itens"),
     }
     return render(request, "carteira/dashboard.html", context)
 

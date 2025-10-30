@@ -1,47 +1,63 @@
+{# templates/carteira/_nova_conta_form.html #}
 <div class="row g-3">
-    <div class="col-md-6">
-        <label class="form-label">Nome do cliente</label>
-        {{ cform.nome }}
+  <div class="col-md-6">
+    <label class="form-label fw-semibold">Cliente</label>
+    {{ cliente_form.nome }}
+  </div>
+  <div class="col-md-3">
+    <label class="form-label fw-semibold">CPF/CNPJ</label>
+    {{ cliente_form.cpf }}
+  </div>
+  <div class="col-md-3">
+    <label class="form-label fw-semibold">Telefone</label>
+    {{ cliente_form.telefone }}
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Vencimento</label>
+    {{ conta_form.vencimento }}
+  </div>
+
+  {# Itens (formset) #}
+  <div class="col-12">
+    <div class="border rounded p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <strong>Itens</strong>
+        <button type="button" class="btn btn-sm btn-outline-dark" onclick="addItem()">+ Item</button>
+      </div>
+      {{ item_formset.management_form }}
+      <div id="itens-wrap">
+        {% for form in item_formset %}
+          <div class="row g-2 align-items-end mb-2 item-row">
+            <div class="col-md-6">
+              <label class="form-label">Produto</label>
+              {{ form.produto }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Quantidade</label>
+              {{ form.quantidade }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Valor Unit. (R$)</label>
+              {{ form.valor_unit }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
     </div>
-    <div class="col-md-3">
-        <label class="form-label">CPF</label>
-        {{ cform.cpf }}
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Telefone</label>
-        {{ cform.telefone }}
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Vencimento (opcional)</label>
-        {{ conta_form.vencimento }}
-    </div>
+  </div>
 </div>
-<hr>
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h6 class="m-0">Itens da venda</h6>
-    <button type="button" class="btn btn-sm btn-dark" onclick="addItemRow()">+ Adicionar produto</button>
-</div>
-<div id="itensWrapper">
-    <!-- linha modelo -->
-    <div class="row g-2 align-items-end item-row d-none" id="itemRowTemplate">
-        <div class="col-md-6">
-            <label class="form-label">Produto</label>
-            <input type="text" name="itens-__prefix__-produto" class="form-control" placeholder="Ex.: Arroz 5kg">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Qtd</label>
-            <input type="number" name="itens-__prefix__-quantidade" min="1" class="form-control" value="1">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">Valor unitário</label>
-            <input type="number" name="itens-__prefix__-valor_unit" step="0.01" class="form-control" value="0.00">
-        </div>
-        <div class="col-md-1 text-end">
-            <button type="button" class="btn btn-link text-danger" onclick="removeItemRow(this)">Remover</button>
-        </div>
-    </div>
-</div>
-<input type="hidden" name="itens-TOTAL_FORMS" id="id_itens-TOTAL_FORMS" value="1">
-<input type="hidden" name="itens-INITIAL_FORMS" value="0">
-<input type="hidden" name="itens-MIN_NUM_FORMS" value="0">
-<input type="hidden" name="itens-MAX_NUM_FORMS" value="1000">
+
+<script>
+function addItem() {
+  // duplica o último item de forma simples (poderemos refinar depois)
+  const wrap = document.getElementById('itens-wrap');
+  const rows = wrap.querySelectorAll('.item-row');
+  if (!rows.length) return;
+  const last = rows[rows.length - 1];
+  const clone = last.cloneNode(true);
+  // limpa valores
+  clone.querySelectorAll('input').forEach(i => i.value = '');
+  wrap.appendChild(clone);
+}
+</script>
