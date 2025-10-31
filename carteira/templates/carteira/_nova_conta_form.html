@@ -18,46 +18,67 @@
     {{ conta_form.vencimento }}
   </div>
 
-  {# Itens (formset) #}
   <div class="col-12">
     <div class="border rounded p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <strong>Itens</strong>
         <button type="button" class="btn btn-sm btn-outline-dark" onclick="addItem()">+ Item</button>
       </div>
+
       {{ item_formset.management_form }}
       <div id="itens-wrap">
         {% for form in item_formset %}
-          <div class="row g-2 align-items-end mb-2 item-row">
-            <div class="col-md-6">
-              <label class="form-label">Produto</label>
-              {{ form.produto }}
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Quantidade</label>
-              {{ form.quantidade }}
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Valor Unit. (R$)</label>
-              {{ form.valor_unit }}
-            </div>
+        <div class="row g-2 align-items-end mb-2 item-row">
+          <div class="col-md-6">
+            <label class="form-label">Produto</label>
+            {{ form.produto }}
           </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantidade</label>
+            {{ form.quantidade }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Valor Unit. (R$)</label>
+            {{ form.valor_unit }}
+          </div>
+        </div>
         {% endfor %}
       </div>
+
+      <!-- Template invisível com empty_form -->
+      <template id="tpl-item-empty">
+        <div class="row g-2 align-items-end mb-2 item-row">
+          <div class="col-md-6">
+            <label class="form-label">Produto</label>
+            {{ item_formset.empty_form.produto }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantidade</label>
+            {{ item_formset.empty_form.quantidade }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Valor Unit. (R$)</label>
+            {{ item_formset.empty_form.valor_unit }}
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </div>
 
 <script>
 function addItem() {
-  // duplica o último item de forma simples (poderemos refinar depois)
   const wrap = document.getElementById('itens-wrap');
-  const rows = wrap.querySelectorAll('.item-row');
-  if (!rows.length) return;
-  const last = rows[rows.length - 1];
-  const clone = last.cloneNode(true);
-  // limpa valores
-  clone.querySelectorAll('input').forEach(i => i.value = '');
-  wrap.appendChild(clone);
+  const totalInput = document.querySelector('input[name="itens-TOTAL_FORMS"]');
+  const tpl = document.getElementById('tpl-item-empty');
+  if (!wrap || !totalInput || !tpl) return;
+
+  const index = parseInt(totalInput.value, 10);
+  const html = tpl.innerHTML.replace(/__prefix__/g, String(index));
+  const temp = document.createElement('div');
+  temp.innerHTML = html.trim();
+  const newRow = temp.firstElementChild;
+  wrap.appendChild(newRow);
+  totalInput.value = String(index + 1);
 }
 </script>

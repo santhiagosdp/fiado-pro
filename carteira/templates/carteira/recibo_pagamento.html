@@ -79,12 +79,11 @@
 <body>
 
   <!-- Header com ações (não imprime) -->
-  <header class="print-header no-print">
+  <header class="print-header">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="title mb-0">🧾 Recibo de Pagamento — FiadoPro</h5>
       <div class="d-flex gap-2">
-        <a href="{% url 'carteira:dashboard' %}" class="btn btn-outline-light btn-sm">Voltar ao dashboard</a>
-        <button class="btn btn-primary btn-sm" onclick="window.print()">Imprimir</button>
+        <button class="btn btn-primary btn-sm no-print" onclick="window.print()">Imprimir</button>
       </div>
     </div>
   </header>

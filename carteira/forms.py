@@ -2,9 +2,23 @@
 import re
 from django import forms
 from django.core.exceptions import ValidationError
-
 from django.forms import formset_factory
 from .models import Cliente, ContaCarteira, ItemVenda, Pagamento
+
+
+class PagamentoForm(forms.ModelForm):
+    # Torna opcional no formulário (se vazio, a view usa timezone.now())
+    data_pagamento = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"})
+    )
+    class Meta:
+        model = Pagamento
+        fields = ["valor", "data_pagamento", "observacao"]
+        widgets = {
+            "valor": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
+            "observacao": forms.TextInput(attrs={"class": "form-control", "placeholder": "Obs (opcional)"}),
+        }
 
 
 class ClienteForm(forms.ModelForm):
@@ -12,50 +26,28 @@ class ClienteForm(forms.ModelForm):
         model = Cliente
         fields = ["nome", "cpf", "telefone"]
         widgets = {
-            "nome": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Nome do cliente",
-            }),
+            "nome": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nome do cliente"}),
             "cpf": forms.TextInput(attrs={
-                "id": "id_cpf_cnpj",            # bate com seu JS
-                "class": "form-control",
+                "id": "id_cpf_cnpj", "class": "form-control",
                 "placeholder": "000.000.000-00 ou 00.000.000/0000-00",
-                "inputmode": "numeric",
-                "autocomplete": "on",
-            }),
+                "inputmode": "numeric", "autocomplete": "on"}),
             "telefone": forms.TextInput(attrs={
-                "id": "id_telefone",            # bate com seu JS
-                "class": "form-control",
-                "placeholder": "(63) 9 0000-0000",
-                "inputmode": "tel",
-                "autocomplete": "tel",
-            }),
+                "id": "id_telefone", "class": "form-control",
+                "placeholder": "(63) 9 0000-0000", "inputmode": "tel", "autocomplete": "tel"}),
         }
 
     def clean_cpf(self):
-        """
-        Aceita CPF (11 dígitos) ou CNPJ (14 dígitos).
-        Remove qualquer máscara e retorna apenas números.
-        """
         v = self.cleaned_data.get("cpf", "") or ""
         digits = re.sub(r"\D+", "", v)
-
         if len(digits) not in (11, 14):
             raise ValidationError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.")
-
-        # Se quiser validar dígito verificador de CPF/CNPJ, me avise que adiciono aqui.
         return digits
 
     def clean_telefone(self):
-        """
-        Remove máscara. Aceita 10 ou 11 dígitos (fixo ou celular com 9).
-        """
         v = self.cleaned_data.get("telefone", "") or ""
         digits = re.sub(r"\D+", "", v)
-
         if len(digits) not in (10, 11):
             raise ValidationError("Informe um telefone válido (DDD + número).")
-
         return digits
 
 
@@ -63,40 +55,17 @@ class ContaForm(forms.ModelForm):
     class Meta:
         model = ContaCarteira
         fields = ["vencimento"]
-        widgets = {
-            "vencimento": forms.DateInput(attrs={
-                "class": "form-control",
-                "type": "date",
-            }),
-        }
+        widgets = {"vencimento": forms.DateInput(attrs={"class": "form-control", "type": "date"})}
 
 
 class ItemInlineForm(forms.Form):
-    produto = forms.CharField(
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Produto"})
-    )
-    quantidade = forms.IntegerField(
-        min_value=1,
-        widget=forms.NumberInput(attrs={"class": "form-control"})
-    )
-    valor_unit = forms.DecimalField(
-        min_value=0,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"})
-    )
+    produto = forms.CharField(widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Produto"}))
+    quantidade = forms.IntegerField(min_value=1, widget=forms.NumberInput(attrs={"class": "form-control"}))
+    valor_unit = forms.DecimalField(min_value=0, decimal_places=2,
+                                    widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
 
 
 ItemFormSet = formset_factory(ItemInlineForm, extra=1, can_delete=True)
-
-
-class PagamentoForm(forms.ModelForm):
-    class Meta:
-        model = Pagamento
-        fields = ["valor", "observacao"]
-        widgets = {
-            "valor": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
-            "observacao": forms.TextInput(attrs={"class": "form-control", "placeholder": "Obs (opcional)"}),
-        }
 
 
 class DeleteConfirmForm(forms.Form):

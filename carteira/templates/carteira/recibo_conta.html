@@ -108,12 +108,11 @@
 <body>
 
   <!-- Cabeçalho (substitui a navbar para ficar bonito e imprimir bem) -->
-  <header class="print-header no-print">
+  <header class="print-header">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="title mb-0">🧾 Comprovante de Venda — FiadoPro</h5>
-      <div class="d-flex gap-2">
-        <a href="{% url 'carteira:dashboard' %}" class="btn btn-outline-light btn-sm">Voltar ao Início</a>
-        <button class="btn btn-primary btn-sm" onclick="window.print()">Imprimir</button>
+      <div class="d-flex gap-2 no-print">
+        <button class="btn btn-primary btn-sm " onclick="window.print()">Imprimir</button>
       </div>
     </div>
   </header>
