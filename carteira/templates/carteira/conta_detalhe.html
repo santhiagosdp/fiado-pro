@@ -105,7 +105,7 @@
           </button>
         </div>
         <div class="card-body p-3">
-          <form id="formPagar" method="post" action="{% url 'carteira:pagar' conta.id %}">
+          <form id="formPagar" method="post" action="{% url 'carteira:pagar' conta.id %}" target="_blank">
             {% csrf_token %}
             <div class="row g-2">
               <div class="col-6">
