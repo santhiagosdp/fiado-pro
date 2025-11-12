@@ -19,9 +19,13 @@ class Empresa(models.Model):
         return f"{self.nome}" + (f" — {self.cnpj_cpf}" if self.cnpj_cpf else "") + f"{self.telefone}"
 
 class Cliente(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="cliente")
     nome = models.CharField(max_length=150)
+    data_nascimento = models.DateField(default=timezone.now)
     cpf = models.CharField(max_length=14, blank=True)
     telefone = models.CharField(max_length=20, blank=True)
+    endereco = models.CharField(max_length=150, default="endereco aqui")
+    email = models.CharField(max_length=150, default="email-do-cliente@mail.com.br")
 
     def __str__(self):
         return f"{self.nome}" + (f" — {self.cpf}" if self.cpf else "")

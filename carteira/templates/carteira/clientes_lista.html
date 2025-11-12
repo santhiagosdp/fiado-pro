@@ -1,0 +1,99 @@
+{% extends "carteira/base.html" %}
+
+{% block title %}Clientes – FiadoPro{% endblock %}
+
+{% block content %}
+<div class="dashboard-hero">
+  <div class="row g-2 align-items-center">
+    <div class="col-12 col-lg-6 top-actions d-flex gap-2">
+  <div>
+          <h3 class="title mb-1">
+            <i class="bi bi-people me-1"></i> Clientes
+          </h3>
+          <small class="text-white-50">
+            Total: {{ total_clientes }} cliente{{ total_clientes|pluralize:"s" }}
+          </small>
+        </div>
+        </div>
+        
+<div class="col-12 col-lg-6">
+    <form class="d-flex search-box" method="get" action=".">
+      <input type="search"
+             name="q"
+             class="form-control form-control-lg me-2"
+             placeholder="Buscar por nome, CPF, telefone ou e-mail…"
+             value="{{ q|default:'' }}"
+             autocomplete="off">
+      <button class="btn btn-light" type="submit">
+        <i class="bi bi-search"></i>
+      </button>
+    </form>
+  </div>
+</div>
+</div>
+
+
+
+{% if q %}
+<div class="alert alert-info py-2 mb-3 d-flex justify-content-between align-items-center">
+  <div>
+    Filtrando por <strong>{{ q }}</strong>.
+    <a class="ms-2" href="{% url 'carteira:clientes_lista' %}">Limpar filtro</a>
+  </div>
+</div>
+{% endif %}
+
+<div class="section-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">Lista de clientes</h4>
+  </div>
+  <div class="card-body">
+    <div class="table-wrap">
+      <table class="table table-striped table-sm table-bordered table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th class="text-center">Data nasc.</th>
+            <th class="text-center">CPF</th>
+            <th class="text-center">Telefone</th>
+            <th>Email</th>
+            <th>Endereço</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in clientes %}
+          <tr>
+            <td>{{ c.nome }}</td>
+            <td class="text-center">
+              {% if c.data_nascimento %}
+                {{ c.data_nascimento|date:"d/m/Y" }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {{ c.cpf|default:"—" }}
+            </td>
+            <td class="text-center">
+              {{ c.telefone|default:"—" }}
+            </td>
+            <td>
+              {{ c.email|default:"—" }}
+            </td>
+            <td>
+              {{ c.endereco|default:"—" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">
+              Nenhum cliente cadastrado ainda.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

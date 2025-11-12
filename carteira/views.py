@@ -137,6 +137,31 @@ def _get_conta_or_404(user, conta_id, include_deleted=False):
 
 
 @login_required
+def clientes_lista(request):
+    user = request.user
+
+    qs = Cliente.objects.filter(owner=user)  # só clientes do usuário logado
+
+    q = request.GET.get("q", "").strip()
+    if q:
+        qs = qs.filter(
+            Q(nome__icontains=q) |
+            Q(cpf__icontains=q) |
+            Q(telefone__icontains=q) |
+            Q(email__icontains=q)
+        )
+
+    qs = qs.order_by("nome")
+
+    context = {
+        "clientes": qs,
+        "q": q,
+        "total_clientes": qs.count(),
+    }
+    return render(request, "carteira/clientes_lista.html", context)
+
+
+@login_required
 @transaction.atomic
 def nova_conta(request):
     if request.method != "POST":

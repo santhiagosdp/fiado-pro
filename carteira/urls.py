@@ -6,6 +6,7 @@ app_name = "carteira"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("clientes/", views.clientes_lista, name="clientes_lista"),
     path("nova/", views.nova_conta, name="nova"),
     path("conta/<int:conta_id>/", views.conta_detalhe, name="conta"),
     path("conta/<int:conta_id>/pagar/", views.pagar, name="pagar"),
