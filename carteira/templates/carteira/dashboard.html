@@ -108,7 +108,7 @@
 <div class="dashboard-hero">
   <div class="row g-2 align-items-center">
     <div class="col-12 col-lg-6 top-actions d-flex gap-2">
-      <!--
+      <!-- Botão de nova conta (deixei comentado, caso não queira exibir)
       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaConta">+ Nova conta de carteira</button>
       <a class="btn btn-outline-light" href="{% url 'carteira:excluidos' %}">Ver excluídos</a>-->
     </div>
@@ -119,7 +119,7 @@
       </form>
     </div>
   </div>
-</div>
+</div> 
 
 {% if q %}
 <div class="alert alert-info py-2 mb-3 d-flex justify-content-between align-items-center">
@@ -408,11 +408,11 @@ document.addEventListener('submit', function (e) {
 }, true);
 </script>
 
-<!-- ====== Máscaras de CPF/CNPJ e Telefone (corrigido) ====== -->
+<!-- ====== Máscaras de CPF/CNPJ e Telefone + autocomplete de cliente ====== -->
 <script>
 (function () {
-  const ID_DOC = 'id_cpf_cnpj';
-  const ID_TEL = 'id_telefone';
+  const ID_DOC = 'id_cpf';       // campo CPF do ClienteForm
+  const ID_TEL = 'id_telefone';  // campo telefone do ClienteForm
 
   const onlyDigits = (v) => (v || '').replace(/\D+/g, '').slice(0, 14);
 
@@ -468,8 +468,141 @@ document.addEventListener('submit', function (e) {
     try { cur.setSelectionRange(masked.length, masked.length); } catch {}
   }
 
+  function desabilitarClienteCampos(container, disable) {
+    if (!container) return;
+    container.querySelectorAll('input, textarea, select').forEach(function (el) {
+      el.disabled = disable;
+    });
+  }
+
+  function limparClienteDados(root) {
+    if (!root) return;
+    ['nome', 'cpf', 'telefone', 'email', 'endereco'].forEach(function (field) {
+      const input = root.querySelector('[name="' + field + '"]');
+      if (input) input.value = '';
+    });
+  }
+
+  function preencherClienteDados(root, data) {
+    if (!root) return;
+    const map = {
+      nome: 'nome',
+      cpf: 'cpf',
+      telefone: 'telefone',
+      email: 'email',
+      endereco: 'endereco'
+    };
+    Object.keys(map).forEach(function (key) {
+      const input = root.querySelector('[name="' + map[key] + '"]');
+      if (input && data[key] !== undefined) {
+        input.value = data[key] || '';
+      }
+    });
+  }
+
+  function setupClienteAutocomplete(modal) {
+    const searchInput = modal.querySelector('#cliente_search');
+    const hiddenId = modal.querySelector('#id_cliente_id');
+    const sugBox = modal.querySelector('#cliente_suggestions');
+    const btnNovo = modal.querySelector('#btn-novo-cliente-inline');
+    const containerDados = modal.querySelector('#cliente-dados');
+
+    if (!searchInput || !hiddenId) return;
+
+    // por padrão: campos bloqueados até escolher cliente ou clicar em "Cadastrar"
+    desabilitarClienteCampos(containerDados, true);
+
+    let timer = null;
+
+    searchInput.addEventListener('input', function () {
+      const term = this.value.trim();
+      hiddenId.value = '';
+      if (!term || term.length < 2) {
+        if (sugBox) {
+          sugBox.style.display = 'none';
+          sugBox.innerHTML = '';
+        }
+        return;
+      }
+
+      if (!sugBox) return;
+
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        fetch("{% url 'carteira:api_clientes_busca' %}?q=" + encodeURIComponent(term), {
+          headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+          .then(function (r) { return r.ok ? r.json() : {results: []}; })
+          .then(function (data) {
+            sugBox.innerHTML = '';
+            const results = (data && data.results) || [];
+            if (!results.length) {
+              sugBox.style.display = 'none';
+              return;
+            }
+
+            results.forEach(function (c) {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'list-group-item list-group-item-action';
+              btn.textContent = c.nome + (c.cpf ? ' — ' + c.cpf : '');
+              btn.addEventListener('click', function () {
+                hiddenId.value = c.id;
+                searchInput.value = c.nome;
+                preencherClienteDados(modal, c);
+                desabilitarClienteCampos(containerDados, true);
+                sugBox.style.display = 'none';
+              });
+              sugBox.appendChild(btn);
+            });
+
+            sugBox.style.display = 'block';
+          })
+          .catch(function () {
+            sugBox.style.display = 'none';
+          });
+      }, 300);
+    });
+
+    if (btnNovo) {
+      btnNovo.addEventListener('click', function () {
+        hiddenId.value = '';
+        searchInput.value = '';
+        limparClienteDados(modal);
+        desabilitarClienteCampos(containerDados, false);  // agora pode editar/ cadastrar
+        searchInput.focus();
+      });
+    }
+  }
+
+  function setupItensDynamic(modal) {
+    const container = modal.querySelector('#itens-container');
+    const btnAdd = modal.querySelector('#btn-add-item');
+    const totalInput = modal.querySelector('#id_itens-TOTAL_FORMS');
+    const template = modal.querySelector('#item-empty-form-template');
+
+    if (!container || !btnAdd || !totalInput || !template) return;
+
+    // Evita registrar o clique mais de uma vez se o modal abrir/fechar
+    if (btnAdd.dataset.bound === '1') return;
+    btnAdd.dataset.bound = '1';
+
+    btnAdd.addEventListener('click', function () {
+      let index = parseInt(totalInput.value, 10) || 0;
+      let html = template.innerHTML.replace(/__prefix__/g, index);
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html.trim();
+      const row = wrapper.firstElementChild;
+      container.appendChild(row);
+      totalInput.value = index + 1;
+    });
+  }
+
   document.addEventListener('shown.bs.modal', function (ev) {
     if (ev.target.id === 'modalNovaConta') {
+      const modal = ev.target;
+
+      // máscaras
       const docInput = document.getElementById(ID_DOC);
       const telInput = document.getElementById(ID_TEL);
       if (docInput) {
@@ -486,10 +619,17 @@ document.addEventListener('submit', function (e) {
         telInput.removeEventListener('input', handlePhoneInput);
         telInput.addEventListener('input', handlePhoneInput);
       }
+
+      // autocomplete de cliente
+      setupClienteAutocomplete(modal);
+
+      // itens dinâmicos
+      setupItensDynamic(modal);
     }
   });
 })();
 </script>
+
 
 <!-- ====== Search debounce + wiring do modal de exclusão ====== -->
 <script>

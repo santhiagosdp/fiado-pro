@@ -24,16 +24,34 @@ class PagamentoForm(forms.ModelForm):
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ["nome", "cpf", "telefone"]
+        fields = ["nome", "cpf", "telefone", "email", "endereco"]
         widgets = {
-            "nome": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nome do cliente"}),
+            "nome": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Nome do cliente"
+            }),
             "cpf": forms.TextInput(attrs={
-                "id": "id_cpf_cnpj", "class": "form-control",
+                "id": "id_cpf_cnpj",
+                "class": "form-control",
                 "placeholder": "000.000.000-00 ou 00.000.000/0000-00",
-                "inputmode": "numeric", "autocomplete": "on"}),
+                "inputmode": "numeric",
+                "autocomplete": "on",
+            }),
             "telefone": forms.TextInput(attrs={
-                "id": "id_telefone", "class": "form-control",
-                "placeholder": "(63) 9 0000-0000", "inputmode": "tel", "autocomplete": "tel"}),
+                "id": "id_telefone",
+                "class": "form-control",
+                "placeholder": "(63) 9 0000-0000",
+                "inputmode": "tel",
+                "autocomplete": "tel",
+            }),
+            "email": forms.EmailInput(attrs={
+                "class": "form-control",
+                "placeholder": "e-mail",
+            }),
+            "endereco": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Endereço",
+            }),
         }
 
     def clean_cpf(self):

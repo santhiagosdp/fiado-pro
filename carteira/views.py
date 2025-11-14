@@ -20,6 +20,7 @@ from django.views.decorators.http import require_GET
 from django.contrib.auth import get_user_model
 from .utils import log_event
 
+
 # ====== CONSTANTS / HELPERS ======
 User = get_user_model()
 DEC = DecimalField(max_digits=12, decimal_places=2)
@@ -129,6 +130,36 @@ def dashboard(request):
     return render(request, "carteira/dashboard.html", context)
 
 
+@login_required
+@require_GET
+def api_clientes_busca(request):
+    """
+    Retorna até 10 clientes do usuário logado cujo nome contenha o termo informado.
+    Usado no autocomplete do modal de Nova Conta.
+    """
+    termo = request.GET.get("q", "").strip()
+    if len(termo) < 2:
+        return JsonResponse({"results": []})
+
+    qs = (
+        Cliente.objects
+        .filter(owner=request.user, nome__icontains=termo)
+        .order_by("nome")[:10]
+    )
+
+    data = []
+    for c in qs:
+        data.append({
+            "id": c.id,
+            "nome": c.nome,
+            "cpf": c.cpf or "",
+            "telefone": c.telefone or "",
+            "email": c.email or "",
+            "endereco": c.endereco or "",
+        })
+    return JsonResponse({"results": data})
+
+
 def _get_conta_or_404(user, conta_id, include_deleted=False):
     qs = ContaCarteira.objects.filter(owner=user).select_related("cliente")
     if not include_deleted:
@@ -167,57 +198,97 @@ def nova_conta(request):
     if request.method != "POST":
         return redirect("carteira:dashboard")
 
-    cform = ClienteForm(request.POST)
+    cliente_id = request.POST.get("cliente_id", "").strip() or None
+
     conta_form = ContaForm(request.POST)
     formset = ItemFormSet(request.POST, prefix="itens")
 
-    if cform.is_valid() and conta_form.is_valid() and formset.is_valid():
-        # 1) Cliente
-        cliente = cform.save()
+    cliente = None
+    cform = None
 
-        # 2) Conta (bind to user)
-        conta = ContaCarteira.objects.create(
-            owner=request.user,
-            cliente=cliente,
-            vencimento=conta_form.cleaned_data.get("vencimento"),
-        )
+    # ====== CASO 1: CLIENTE EXISTENTE ======
+    if cliente_id:
+        if conta_form.is_valid() and formset.is_valid():
+            cliente = get_object_or_404(Cliente, pk=cliente_id, owner=request.user)
 
-        # 3) Itens
-        for form in formset:
-            cd = form.cleaned_data
-            if not cd or cd.get("DELETE"):
-                continue
-            ItemVenda.objects.create(
-                conta=conta,
-                produto=cd["produto"],
-                quantidade=cd["quantidade"],
-                valor_unit=cd["valor_unit"],
+            conta = ContaCarteira.objects.create(
+                owner=request.user,
+                cliente=cliente,
+                vencimento=conta_form.cleaned_data.get("vencimento"),
             )
 
-        # 4) Totais
-        conta.atualizar_totais()
-        messages.success(request, f"Conta #{conta.id} criada para {cliente.nome}.")
-        from .utils import log_event
-        log_event(
-            request,
-            action="conta_criar",
-            descricao=f"Usuário {request.user}: Criou conta #{conta.id} para {cliente.nome}",
-            extra={"conta_id": conta.id, "cliente_id": cliente.id},
-        )
-        return redirect("carteira:recibo_conta", conta_id=conta.id)
+            for form in formset:
+                cd = form.cleaned_data
+                if not cd or cd.get("DELETE"):
+                    continue
+                ItemVenda.objects.create(
+                    conta=conta,
+                    produto=cd["produto"],
+                    quantidade=cd["quantidade"],
+                    valor_unit=cd["valor_unit"],
+                )
 
-    # Se inválido, re-render (mantendo modal aberto)
+            conta.atualizar_totais()
+            messages.success(request, f"Conta #{conta.id} criada para {cliente.nome}.")
+            log_event(
+                request,
+                action="conta_criar",
+                descricao=f"Usuário {request.user}: Criou conta #{conta.id} para {cliente.nome}",
+                extra={"conta_id": conta.id, "cliente_id": cliente.id},
+            )
+            return redirect("carteira:recibo_conta", conta_id=conta.id)
+        else:
+            messages.error(request, "Corrija os erros no formulário.")
+    # ====== CASO 2: NOVO CLIENTE ======
+    else:
+        cform = ClienteForm(request.POST)
+        if cform.is_valid() and conta_form.is_valid() and formset.is_valid():
+            # 👇 AQUI ESTAVA O PROBLEMA
+            cliente = cform.save(commit=False)
+            cliente.owner = request.user        # define o dono
+            cliente.save()
+
+            conta = ContaCarteira.objects.create(
+                owner=request.user,
+                cliente=cliente,
+                vencimento=conta_form.cleaned_data.get("vencimento"),
+            )
+
+            for form in formset:
+                cd = form.cleaned_data
+                if not cd or cd.get("DELETE"):
+                    continue
+                ItemVenda.objects.create(
+                    conta=conta,
+                    produto=cd["produto"],
+                    quantidade=cd["quantidade"],
+                    valor_unit=cd["valor_unit"],
+                )
+
+            conta.atualizar_totais()
+            messages.success(request, f"Conta #{conta.id} criada para {cliente.nome}.")
+            log_event(
+                request,
+                action="conta_criar",
+                descricao=f"Usuário {request.user}: Criou conta #{conta.id} para {cliente.nome}",
+                extra={"conta_id": conta.id, "cliente_id": cliente.id},
+            )
+            return redirect("carteira:recibo_conta", conta_id=conta.id)
+        else:
+            messages.error(request, "Corrija os dados do cliente e da conta.")
+
+    # ====== Se chegou aqui, teve erro → re-renderiza dashboard com modal aberto ======
     base = ContaCarteira.objects.filter(owner=request.user, is_deleted=False).select_related("cliente")
     atrasados = base.filter(status="ATRASO")
     em_aberto = base.filter(status="EM_ABERTO")
     quitados = base.filter(status="PAGO")
-    messages.error(request, "Corrija os erros no formulário.")
+
     return render(request, "carteira/dashboard.html", {
         "q": request.GET.get("q", "").strip(),
         "atrasados": atrasados.order_by("vencimento", "id"),
         "em_aberto": em_aberto.order_by("vencimento", "id"),
         "quitados": quitados.order_by("vencimento", "id"),
-        "cliente_form": cform,
+        "cliente_form": cform or ClienteForm(),
         "conta_form": conta_form,
         "item_formset": formset,
         "del_form": DeleteConfirmForm(),

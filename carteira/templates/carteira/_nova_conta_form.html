@@ -1,84 +1,128 @@
-{# templates/carteira/_nova_conta_form.html #}
-<div class="row g-3">
-  <div class="col-md-6">
-    <label class="form-label fw-semibold">Cliente</label>
-    {{ cliente_form.nome }}
-  </div>
-  <div class="col-md-3">
-    <label class="form-label fw-semibold">CPF/CNPJ</label>
-    {{ cliente_form.cpf }}
-  </div>
-  <div class="col-md-3">
-    <label class="form-label fw-semibold">Telefone</label>
-    {{ cliente_form.telefone }}
-  </div>
+{# carteira/_nova_conta_form.html #}
 
-  <div class="col-md-4">
-    <label class="form-label fw-semibold">Vencimento</label>
-    {{ conta_form.vencimento }}
+{# Exibe erros gerais, se houver #}
+{% if cliente_form.errors or conta_form.errors or item_formset.non_form_errors %}
+  <div class="alert alert-danger">
+    <strong>Verifique os campos destacados.</strong>
+    {{ cliente_form.non_field_errors }}
+    {{ conta_form.non_field_errors }}
+    {{ item_formset.non_form_errors }}
   </div>
+{% endif %}
 
-  <div class="col-12">
-    <div class="border rounded p-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <strong>Itens</strong>
-        <button type="button" class="btn btn-sm btn-outline-dark" onclick="addItem()">+ Item</button>
-      </div>
+{# Campos ocultos dos formulários (se houver) #}
+{% for hidden in cliente_form.hidden_fields %}
+  {{ hidden }}
+{% endfor %}
+{% for hidden in conta_form.hidden_fields %}
+  {{ hidden }}
+{% endfor %}
 
-      {{ item_formset.management_form }}
-      <div id="itens-wrap">
-        {% for form in item_formset %}
-        <div class="row g-2 align-items-end mb-2 item-row">
-          <div class="col-md-6">
-            <label class="form-label">Produto</label>
-            {{ form.produto }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Quantidade</label>
-            {{ form.quantidade }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Valor Unit. (R$)</label>
-            {{ form.valor_unit }}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
+{# ===================== CLIENTE (busca + dados) ===================== #}
+<div class="mb-2">
+  <label class="form-label fw-semibold">Cliente</label>
+  <div class="position-relative">
+    <input type="text"
+           id="cliente_search"
+           class="form-control"
+           placeholder="Digite o nome do cliente…"
+           autocomplete="off">
 
-      <!-- Template invisível com empty_form -->
-      <template id="tpl-item-empty">
-        <div class="row g-2 align-items-end mb-2 item-row">
-          <div class="col-md-6">
-            <label class="form-label">Produto</label>
-            {{ item_formset.empty_form.produto }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Quantidade</label>
-            {{ item_formset.empty_form.quantidade }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Valor Unit. (R$)</label>
-            {{ item_formset.empty_form.valor_unit }}
-          </div>
-        </div>
-      </template>
+    <input type="hidden" id="id_cliente_id" name="cliente_id">
+
+    <div id="cliente_suggestions"
+         class="list-group position-absolute w-100 shadow-sm"
+         style="z-index: 1056; max-height: 220px; overflow-y: auto; display: none;">
     </div>
+  </div>
+  <div class="form-text">
+    Comece a digitar o nome para buscar.
+    Se não encontrar, clique em
+    <button type="button"
+            class="btn btn-link btn-sm p-0 align-baseline"
+            id="btn-novo-cliente-inline">
+      Cadastrar novo cliente
+    </button>.
   </div>
 </div>
 
-<script>
-function addItem() {
-  const wrap = document.getElementById('itens-wrap');
-  const totalInput = document.querySelector('input[name="itens-TOTAL_FORMS"]');
-  const tpl = document.getElementById('tpl-item-empty');
-  if (!wrap || !totalInput || !tpl) return;
+<div id="cliente-dados" class="modal-form-grid two-cols mt-2">
+  <div class="col-12">
+    <label class="form-label fw-semibold">Nome</label>
+    {{ cliente_form.nome }}
+  </div>
+  <div>
+    <label class="form-label fw-semibold">CPF</label>
+    {{ cliente_form.cpf }}
+  </div>
+  <div>
+    <label class="form-label fw-semibold">Telefone</label>
+    {{ cliente_form.telefone }}
+  </div>
+  <div class="col-12">
+    <label class="form-label fw-semibold">E-mail</label>
+    {{ cliente_form.email }}
+  </div>
+  <div class="col-12">
+    <label class="form-label fw-semibold">Endereço</label>
+    {{ cliente_form.endereco }}
+  </div>
+</div>
 
-  const index = parseInt(totalInput.value, 10);
-  const html = tpl.innerHTML.replace(/__prefix__/g, String(index));
-  const temp = document.createElement('div');
-  temp.innerHTML = html.trim();
-  const newRow = temp.firstElementChild;
-  wrap.appendChild(newRow);
-  totalInput.value = String(index + 1);
-}
-</script>
+<hr class="my-3">
+
+{# ===================== DADOS DA CONTA ===================== #}
+<div class="modal-form-grid two-cols">
+  <div>
+    <label class="form-label fw-semibold">Vencimento</label>
+    {{ conta_form.vencimento }}
+  </div>
+</div>
+
+<hr class="my-3">
+
+{# ===================== ITENS DA VENDA (FORMSET DINÂMICO) ===================== #}
+<div>
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-semibold mb-0">Itens da venda</h6>
+    <button type="button"
+            class="btn btn-outline-secondary btn-sm"
+            id="btn-add-item">
+      + Adicionar item
+    </button>
+  </div>
+
+  {{ item_formset.management_form }}
+
+  <div id="itens-container">
+    {% for form in item_formset %}
+      <div class="row g-2 mb-2 item-row">
+        <div class="col-6">
+          {{ form.produto.label_tag }} {{ form.produto }}
+        </div>
+        <div class="col-3">
+          {{ form.quantidade.label_tag }} {{ form.quantidade }}
+        </div>
+        <div class="col-3">
+          {{ form.valor_unit.label_tag }} {{ form.valor_unit }}
+        </div>
+        {# Se quiser habilitar remoção depois, dá pra usar form.DELETE aqui #}
+      </div>
+    {% endfor %}
+  </div>
+
+  {# Template do formulário vazio para o JS clonar #}
+  <script type="text/template" id="item-empty-form-template">
+    <div class="row g-2 mb-2 item-row">
+      <div class="col-6">
+        {{ item_formset.empty_form.produto.label_tag }} {{ item_formset.empty_form.produto }}
+      </div>
+      <div class="col-3">
+        {{ item_formset.empty_form.quantidade.label_tag }} {{ item_formset.empty_form.quantidade }}
+      </div>
+      <div class="col-3">
+        {{ item_formset.empty_form.valor_unit.label_tag }} {{ item_formset.empty_form.valor_unit }}
+      </div>
+    </div>
+  </script>
+</div>
